@@ -5,36 +5,48 @@ function getClient(): LinearClient {
 	return new LinearClient({ apiKey: process.env.LINEAR_API_KEY ?? "" });
 }
 
-export async function fetchLinearIssues(teamId: string, hoursBack = 48): Promise<ActivityItem[]> {
+export async function fetchLinearIssues(
+	teamId: string,
+	hoursBack = 336,
+): Promise<ActivityItem[]> {
 	try {
 		const linear = getClient();
 		const since = new Date(Date.now() - hoursBack * 3600000);
 
-		const issues = await linear.issues({
-			filter: {
-				team: { id: { eq: teamId } },
-				updatedAt: { gte: since },
-			},
-			first: 50,
-		});
-
 		const items: ActivityItem[] = [];
-		for (const issue of issues.nodes) {
-			const assignee = await issue.assignee;
-			const state = await issue.state;
-			const labelConnection = await issue.labels();
-			const labels = labelConnection.nodes.map((l) => l.name);
+		let hasMore = true;
+		let cursor: string | undefined;
 
-			items.push({
-				source: "linear",
-				type: "linear_issue",
-				title: issue.title,
-				author: assignee?.name ?? "unassigned",
-				timestamp: issue.updatedAt.toISOString(),
-				url: issue.url,
-				status: mapLinearState(state?.type),
-				labels,
+		while (hasMore) {
+			const issues = await linear.issues({
+				filter: {
+					team: { id: { eq: teamId } },
+					updatedAt: { gte: since },
+				},
+				first: 100,
+				after: cursor,
 			});
+
+			for (const issue of issues.nodes) {
+				const assignee = await issue.assignee;
+				const state = await issue.state;
+				const labelConnection = await issue.labels();
+				const labels = labelConnection.nodes.map((l) => l.name);
+
+				items.push({
+					source: "linear",
+					type: "linear_issue",
+					title: issue.title,
+					author: assignee?.name ?? "unassigned",
+					timestamp: issue.updatedAt.toISOString(),
+					url: issue.url,
+					status: mapLinearState(state?.type),
+					labels,
+				});
+			}
+
+			hasMore = issues.pageInfo.hasNextPage;
+			cursor = issues.pageInfo.endCursor ?? undefined;
 		}
 
 		return items;
