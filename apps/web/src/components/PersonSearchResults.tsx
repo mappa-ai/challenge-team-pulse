@@ -139,7 +139,7 @@ export function PersonSearchResults({ query, summary, activities }: PersonSearch
 							/>
 						</svg>
 					</div>
-					<h3 className="text-sm font-semibold text-indigo-300">AI Analysis</h3>
+					<h3 className="text-sm font-semibold text-indigo-300">IA Mario</h3>
 				</div>
 				<p className="text-gray-200 text-sm leading-relaxed">{summary}</p>
 			</div>
