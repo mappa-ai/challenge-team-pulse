@@ -1,6 +1,21 @@
 import { fetchLinearIssues, runAgent, teams } from "@team-pulse/core";
 import { NextResponse } from "next/server";
 
+const DISPLAY_NAMES: Record<string, string> = {
+	"greynner@mappa.ai": "Greynner Moreno",
+	"yordi@mappa.ai": "Yordi",
+	"julian@mappa.ai": "Julian",
+	"sarah@mappa.ai": "Sarah",
+	"pablo@mappa.ai": "Pablo",
+	"rafaello@mappa.ai": "Rafaello Virgilli",
+	"cristobal@mappa.ai": "Cristobal",
+	"sebastian@mappa.ai": "Sebastian",
+};
+
+function resolveDisplayName(name: string): string {
+	return DISPLAY_NAMES[name] ?? name;
+}
+
 export async function POST() {
 	try {
 		const allLinearTeamIds = [...new Set(teams.flatMap((t) => t.linearTeamIds))];
@@ -17,7 +32,8 @@ export async function POST() {
 
 		for (const issue of allIssues) {
 			if (issue.author === "unassigned") continue;
-			const current = byAuthor.get(issue.author) ?? {
+			const displayName = resolveDisplayName(issue.author);
+			const current = byAuthor.get(displayName) ?? {
 				total: 0,
 				done: 0,
 				inProgress: 0,
@@ -30,7 +46,7 @@ export async function POST() {
 			else if (["in progress", "in review"].includes(status)) current.inProgress++;
 			else current.todo++;
 			current.issues.push(`${issue.identifier}: ${issue.title} (${issue.status})`);
-			byAuthor.set(issue.author, current);
+			byAuthor.set(displayName, current);
 		}
 
 		const memberStats = Array.from(byAuthor.entries()).map(([name, stats]) => ({
