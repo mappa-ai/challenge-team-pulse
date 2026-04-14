@@ -1,24 +1,18 @@
 "use client";
 
-import type { TeamSummary } from "@team-pulse/core";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-interface TeamWithSummary {
-	slug: string;
-	name: string;
-	color: string;
-	slackChannels: string[];
-	githubRepos: string[];
-	summary: TeamSummary | null;
-}
-
 interface MemberStats {
 	name: string;
-	total: number;
-	done: number;
-	inProgress: number;
-	todo: number;
+	linearTotal: number;
+	linearDone: number;
+	linearInProgress: number;
+	linearTodo: number;
+	prs: number;
+	prsMerged: number;
+	commits: number;
+	totalActivity: number;
 	completionRate: number;
 }
 
@@ -44,10 +38,10 @@ function MemberRow({ member, rank }: { member: MemberStats; rank: number }) {
 	return (
 		<Link
 			href={`/search?q=${encodeURIComponent(member.name)}`}
-			className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/[0.04] transition-all group"
+			className="flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-white/[0.04] transition-all group"
 		>
 			<span className="text-xs text-gray-600 w-5 text-right font-mono">{rank}</span>
-			<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/30 to-purple-500/20 flex items-center justify-center text-sm font-semibold text-indigo-300 flex-shrink-0">
+			<div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500/30 to-purple-500/20 flex items-center justify-center text-sm font-semibold text-indigo-300 flex-shrink-0">
 				{member.name
 					.split(" ")
 					.map((n) => n[0])
@@ -59,10 +53,22 @@ function MemberRow({ member, rank }: { member: MemberStats; rank: number }) {
 				<p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors truncate">
 					{member.name}
 				</p>
-				<div className="flex items-center gap-3 mt-0.5">
-					<span className="text-[10px] text-emerald-400">{member.done} done</span>
-					<span className="text-[10px] text-yellow-400">{member.inProgress} in progress</span>
-					<span className="text-[10px] text-gray-500">{member.todo} to do</span>
+				<div className="flex items-center gap-2 mt-1">
+					{member.linearTotal > 0 && (
+						<span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+							{member.linearDone}/{member.linearTotal} issues
+						</span>
+					)}
+					{member.prs > 0 && (
+						<span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
+							{member.prs} PRs
+						</span>
+					)}
+					{member.commits > 0 && (
+						<span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+							{member.commits} commits
+						</span>
+					)}
 				</div>
 			</div>
 			<div className="w-28">
@@ -81,26 +87,22 @@ interface Insights {
 }
 
 export default function Dashboard() {
-	const [teams, setTeams] = useState<TeamWithSummary[]>([]);
 	const [members, setMembers] = useState<MemberStats[]>([]);
 	const [totalIssues, setTotalIssues] = useState(0);
-	const [loading, setLoading] = useState(true);
 	const [membersLoading, setMembersLoading] = useState(true);
 	const [insights, setInsights] = useState<Insights | null>(null);
 	const [insightsLoading, setInsightsLoading] = useState(false);
 
-	const fetchTeams = useCallback(async () => {
-		const res = await fetch("/api/teams");
-		const data = await res.json();
-		setTeams(data.teams);
-		setLoading(false);
-	}, []);
+	const [totalPRs, setTotalPRs] = useState(0);
+	const [totalCommits, setTotalCommits] = useState(0);
 
 	const fetchMembers = useCallback(async () => {
 		const res = await fetch("/api/members");
 		const data = await res.json();
 		setMembers(data.members);
 		setTotalIssues(data.totalIssues);
+		setTotalPRs(data.totalPRs ?? 0);
+		setTotalCommits(data.totalCommits ?? 0);
 		setMembersLoading(false);
 	}, []);
 
@@ -117,17 +119,15 @@ export default function Dashboard() {
 	}
 
 	useEffect(() => {
-		fetchTeams();
 		fetchMembers();
-	}, [fetchTeams, fetchMembers]);
+	}, [fetchMembers]);
 
-	const totalRepos = teams.reduce((sum, t) => sum + t.githubRepos.length, 0);
 	const avgCompletion =
 		members.length > 0
 			? Math.round(members.reduce((sum, m) => sum + m.completionRate, 0) / members.length)
 			: 0;
-	const totalDone = members.reduce((sum, m) => sum + m.done, 0);
-	const totalInProgress = members.reduce((sum, m) => sum + m.inProgress, 0);
+	const totalDone = members.reduce((sum, m) => sum + m.linearDone, 0);
+	const totalInProgress = members.reduce((sum, m) => sum + m.linearInProgress, 0);
 
 	return (
 		<div className="px-8 py-8 max-w-6xl">
@@ -190,7 +190,7 @@ export default function Dashboard() {
 			</div>
 
 			{/* Stats Row */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+			<div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
 				<div className="rounded-2xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20 p-5">
 					<p className="text-[10px] uppercase tracking-wider text-indigo-400 font-semibold mb-1">
 						Team Members
@@ -203,14 +203,20 @@ export default function Dashboard() {
 					</p>
 					<p className="text-3xl font-bold text-white">{totalDone}</p>
 				</div>
-				<div className="rounded-2xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 p-5">
-					<p className="text-[10px] uppercase tracking-wider text-yellow-400 font-semibold mb-1">
-						In Progress
-					</p>
-					<p className="text-3xl font-bold text-white">{totalInProgress}</p>
-				</div>
 				<div className="rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 p-5">
 					<p className="text-[10px] uppercase tracking-wider text-purple-400 font-semibold mb-1">
+						Pull Requests
+					</p>
+					<p className="text-3xl font-bold text-white">{totalPRs}</p>
+				</div>
+				<div className="rounded-2xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 p-5">
+					<p className="text-[10px] uppercase tracking-wider text-yellow-400 font-semibold mb-1">
+						Commits
+					</p>
+					<p className="text-3xl font-bold text-white">{totalCommits}</p>
+				</div>
+				<div className="rounded-2xl bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 p-5">
+					<p className="text-[10px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">
 						Avg Completion
 					</p>
 					<p className="text-3xl font-bold text-white">
@@ -437,68 +443,25 @@ export default function Dashboard() {
 						</div>
 					</div>
 
-					{/* Quick Links */}
-					<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-5">
-						<h2 className="text-sm font-semibold text-white mb-3">Quick Access</h2>
-						<div className="space-y-2">
-							{teams.map((team) => (
-								<Link
-									key={team.slug}
-									href={`/team/${team.slug}`}
-									className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-all group"
-								>
-									<div className="flex items-center gap-2.5">
-										<div
-											className="w-2.5 h-2.5 rounded-full"
-											style={{ backgroundColor: team.color }}
-										/>
-										<span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-											{team.name}
-										</span>
-									</div>
-									<div className="flex items-center gap-2 text-xs text-gray-600">
-										<span>{team.githubRepos.length} repos</span>
-										<svg
-											aria-hidden="true"
-											className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M9 5l7 7-7 7"
-											/>
-										</svg>
-									</div>
-								</Link>
-							))}
-						</div>
-					</div>
-
-					{/* Repos */}
-					<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-5">
-						<h2 className="text-sm font-semibold text-white mb-1">Repositories</h2>
-						<p className="text-xs text-gray-500 mb-3">{totalRepos} active repos tracked</p>
-						{!loading && teams[0] && (
-							<div className="flex flex-wrap gap-1.5">
-								{teams[0].githubRepos.slice(0, 8).map((repo) => (
-									<span
-										key={repo}
-										className="text-[10px] px-2 py-1 rounded-md bg-white/[0.04] text-gray-500 font-mono"
-									>
-										{repo.split("/")[1]}
-									</span>
-								))}
-								{teams[0].githubRepos.length > 8 && (
-									<span className="text-[10px] px-2 py-1 rounded-md bg-white/[0.04] text-gray-500">
-										+{teams[0].githubRepos.length - 8} more
-									</span>
-								)}
+					{/* GitHub Summary */}
+					<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6">
+						<h2 className="text-sm font-semibold text-white mb-4">GitHub Activity</h2>
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<span className="text-xs text-gray-400">Pull Requests</span>
+								<span className="text-sm font-bold text-purple-400">{totalPRs}</span>
 							</div>
-						)}
+							<div className="flex items-center justify-between">
+								<span className="text-xs text-gray-400">Commits</span>
+								<span className="text-sm font-bold text-emerald-400">{totalCommits}</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-xs text-gray-400">Active Contributors</span>
+								<span className="text-sm font-bold text-white">
+									{members.filter((m) => m.prs > 0 || m.commits > 0).length}
+								</span>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
