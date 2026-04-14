@@ -78,9 +78,9 @@ export default function TeamPage() {
 		return (
 			<div className="px-8 py-8">
 				<div className="animate-pulse space-y-6">
-					<div className="h-6 bg-white/10 rounded w-1/4" />
-					<div className="h-40 bg-white/[0.03] rounded-xl" />
-					<div className="h-40 bg-white/[0.03] rounded-xl" />
+					<div className="h-8 bg-white/10 rounded w-1/4" />
+					<div className="h-48 bg-white/[0.03] rounded-2xl" />
+					<div className="h-48 bg-white/[0.03] rounded-2xl" />
 				</div>
 			</div>
 		);
@@ -103,18 +103,32 @@ export default function TeamPage() {
 	const commits = activityItems.filter((i) => i.type === "commit");
 
 	return (
-		<div className="px-8 py-8">
+		<div className="px-8 py-8 max-w-6xl">
 			{/* Header */}
-			<div className="flex items-center justify-between mb-6">
-				<div className="flex items-center gap-3">
-					<div className="w-4 h-4 rounded-full" style={{ backgroundColor: team.color }} />
-					<h1 className="text-2xl font-bold text-white">{team.name}</h1>
+			<div className="flex items-center justify-between mb-8">
+				<div className="flex items-center gap-4">
+					<div
+						className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg"
+						style={{
+							background: `linear-gradient(135deg, ${team.color}, ${team.color}80)`,
+							boxShadow: `0 4px 14px ${team.color}30`,
+						}}
+					>
+						{team.name[0]}
+					</div>
+					<div>
+						<h1 className="text-2xl font-bold text-white">{team.name}</h1>
+						<p className="text-sm text-gray-500 mt-0.5">
+							{team.githubRepos.length} repos &middot;{" "}
+							{team.linearTeamIds.length > 0 ? "Linear connected" : "GitHub only"}
+						</p>
+					</div>
 				</div>
 				<button
 					type="button"
 					onClick={refresh}
 					disabled={refreshing}
-					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
 				>
 					{refreshing ? (
 						<>
@@ -146,26 +160,6 @@ export default function TeamPage() {
 				</button>
 			</div>
 
-			{/* Source badges */}
-			<div className="mb-6 flex flex-wrap gap-2">
-				{team.slackChannels.map((ch) => (
-					<span
-						key={ch}
-						className="text-xs px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300"
-					>
-						# {ch}
-					</span>
-				))}
-				{team.githubRepos.map((repo) => (
-					<span
-						key={repo}
-						className="text-xs px-2.5 py-1 rounded-md bg-gray-500/10 border border-gray-500/20 text-gray-400"
-					>
-						{repo}
-					</span>
-				))}
-			</div>
-
 			{/* Tabs */}
 			<TabBar tabs={["Summary", "Activity"]} active={activeTab} onChange={handleTabChange} />
 
@@ -175,13 +169,29 @@ export default function TeamPage() {
 					(summary ? (
 						<SummaryView summary={summary} />
 					) : (
-						<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-10 text-center">
-							<p className="text-gray-500 mb-4">No summary generated yet for this team.</p>
+						<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-12 text-center">
+							<div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-4">
+								<svg
+									aria-hidden="true"
+									className="w-8 h-8 text-indigo-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={1.5}
+										d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+									/>
+								</svg>
+							</div>
+							<p className="text-gray-400 mb-4">No AI summary yet. Generate one to get started.</p>
 							<button
 								type="button"
 								onClick={refresh}
 								disabled={refreshing}
-								className="px-5 py-2.5 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+								className="px-5 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
 							>
 								Generate Summary
 							</button>
@@ -205,73 +215,77 @@ export default function TeamPage() {
 					) : (
 						<div className="space-y-8">
 							{/* PR Table */}
-							<div>
-								<h3 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
-									Pull Requests
-									<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
-										{prs.length}
-									</span>
-								</h3>
+							<ActivitySection title="Pull Requests" count={prs.length} color="text-purple-400">
 								<ActivityTable
 									items={prs}
 									columns={["author", "title", "repo", "status", "timestamp"]}
 									emptyMessage="No recent pull requests"
 								/>
-							</div>
+							</ActivitySection>
 
-							{/* Linear Issues Table */}
+							{/* Linear Issues */}
 							{linearIssues.length > 0 && (
-								<div>
-									<h3 className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
-										Linear Issues
-										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
-											{linearIssues.length}
-										</span>
-									</h3>
+								<ActivitySection
+									title="Linear Issues"
+									count={linearIssues.length}
+									color="text-blue-400"
+								>
 									<ActivityTable
 										items={linearIssues}
 										columns={["id", "author", "title", "status", "labels", "timestamp"]}
 										emptyMessage="No recent Linear issues"
 									/>
-								</div>
+								</ActivitySection>
 							)}
 
 							{/* GitHub Issues */}
 							{issues.length > 0 && (
-								<div>
-									<h3 className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
-										Issues
-										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
-											{issues.length}
-										</span>
-									</h3>
+								<ActivitySection title="Issues" count={issues.length} color="text-amber-400">
 									<ActivityTable
 										items={issues}
 										columns={["author", "title", "repo", "status", "timestamp"]}
 										emptyMessage="No recent issues"
 									/>
-								</div>
+								</ActivitySection>
 							)}
 
 							{/* Commits */}
 							{commits.length > 0 && (
-								<div>
-									<h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
-										Commits
-										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
-											{commits.length}
-										</span>
-									</h3>
+								<ActivitySection title="Commits" count={commits.length} color="text-emerald-400">
 									<ActivityTable
 										items={commits}
 										columns={["author", "title", "repo", "timestamp"]}
 										emptyMessage="No recent commits"
 									/>
-								</div>
+								</ActivitySection>
 							)}
 						</div>
 					))}
 			</div>
+		</div>
+	);
+}
+
+function ActivitySection({
+	title,
+	count,
+	color,
+	children,
+}: {
+	title: string;
+	count: number;
+	color: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div>
+			<div className="flex items-center gap-2.5 mb-3">
+				<h3 className={`text-sm font-semibold ${color}`}>{title}</h3>
+				<span className="text-[11px] text-gray-500 bg-white/[0.06] px-2 py-0.5 rounded-full font-medium">
+					{count}
+				</span>
+			</div>
+			{children}
 		</div>
 	);
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { StatCard } from "$/components/StatCard";
 import { TeamCard } from "$/components/TeamCard";
 import type { TeamSummary } from "@team-pulse/core";
 import { useCallback, useEffect, useState } from "react";
@@ -47,18 +46,18 @@ export default function Dashboard() {
 	const cachedCount = teams.filter((t) => t.summary !== null).length;
 
 	return (
-		<div className="px-8 py-8">
+		<div className="px-8 py-8 max-w-6xl">
 			{/* Header */}
 			<div className="flex items-end justify-between mb-8">
 				<div>
-					<h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
-					<p className="text-gray-500 mt-1 text-sm">Overview of all team activity and summaries</p>
+					<h1 className="text-2xl font-bold text-white tracking-tight">Overview</h1>
+					<p className="text-gray-500 mt-1 text-sm">Team activity and AI-generated summaries</p>
 				</div>
 				<button
 					type="button"
 					onClick={refreshAll}
 					disabled={refreshing !== null}
-					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
 				>
 					{refreshing ? (
 						<>
@@ -82,7 +81,7 @@ export default function Dashboard() {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
 								/>
 							</svg>
-							Refreshing...
+							Generating...
 						</>
 					) : (
 						"Refresh All"
@@ -90,94 +89,29 @@ export default function Dashboard() {
 				</button>
 			</div>
 
-			{/* Stats */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-				<StatCard
-					label="Teams"
-					value={teams.length}
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-							/>
-						</svg>
-					}
-				/>
-				<StatCard
-					label="Repositories"
-					value={totalRepos}
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-							/>
-						</svg>
-					}
-				/>
-				<StatCard
-					label="Summaries Cached"
-					value={cachedCount}
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-					}
-				/>
-				<StatCard
-					label="Data Sources"
-					value="3"
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-							/>
-						</svg>
-					}
-				/>
+			{/* Quick Stats */}
+			<div className="grid grid-cols-3 gap-4 mb-8">
+				<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5">
+					<p className="text-xs text-gray-500 mb-1">Teams</p>
+					<p className="text-3xl font-bold text-white">{teams.length}</p>
+				</div>
+				<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5">
+					<p className="text-xs text-gray-500 mb-1">Repositories</p>
+					<p className="text-3xl font-bold text-white">{totalRepos}</p>
+				</div>
+				<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5">
+					<p className="text-xs text-gray-500 mb-1">Summaries Ready</p>
+					<p className="text-3xl font-bold text-white">
+						{cachedCount}
+						<span className="text-lg text-gray-600 font-normal">/{teams.length}</span>
+					</p>
+				</div>
 			</div>
 
 			{/* Team Cards */}
 			{loading ? (
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-					{[1, 2, 3, 4].map((i) => (
+					{[1, 2].map((i) => (
 						<div
 							key={i}
 							className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6 animate-pulse"

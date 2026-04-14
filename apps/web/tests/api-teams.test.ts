@@ -12,11 +12,11 @@ describe("GET /api/teams", () => {
 		expect(data.teams).toBeArray();
 	});
 
-	it("returns exactly 4 teams", async () => {
+	it("returns exactly 1 team", async () => {
 		const res = await GET();
 		const data = await parseJson(res);
 		const teams = data.teams as unknown[];
-		expect(teams).toHaveLength(4);
+		expect(teams).toHaveLength(1);
 	});
 
 	it("each team has slug, name, color, and summary fields", async () => {
@@ -37,10 +37,7 @@ describe("GET /api/teams", () => {
 		const data = await parseJson(res);
 		const slugs = (data.teams as Record<string, string>[]).map((t) => t.slug);
 
-		expect(slugs).toContain("platform");
-		expect(slugs).toContain("ai-voice");
-		expect(slugs).toContain("recruiting");
-		expect(slugs).toContain("data-infra");
+		expect(slugs).toContain("product");
 	});
 
 	it("returns cached count", async () => {
@@ -53,8 +50,8 @@ describe("GET /api/teams", () => {
 
 describe("GET /api/teams/[slug]", () => {
 	it("returns 200 with team data for a valid slug", async () => {
-		const req = jsonRequest("http://localhost/api/teams/platform");
-		const res = await GET_SLUG(req, { params: { slug: "platform" } });
+		const req = jsonRequest("http://localhost/api/teams/product");
+		const res = await GET_SLUG(req, { params: { slug: "product" } });
 
 		expect(res.status).toBe(200);
 
@@ -62,13 +59,13 @@ describe("GET /api/teams/[slug]", () => {
 		expect(data.team).toBeDefined();
 
 		const team = data.team as Record<string, unknown>;
-		expect(team.slug).toBe("platform");
-		expect(team.name).toBe("Platform");
+		expect(team.slug).toBe("product");
+		expect(team.name).toBe("Product Team");
 	});
 
 	it("returns team config with slackChannels and githubRepos", async () => {
-		const req = jsonRequest("http://localhost/api/teams/ai-voice");
-		const res = await GET_SLUG(req, { params: { slug: "ai-voice" } });
+		const req = jsonRequest("http://localhost/api/teams/product");
+		const res = await GET_SLUG(req, { params: { slug: "product" } });
 		const data = await parseJson(res);
 		const team = data.team as Record<string, unknown>;
 
@@ -87,8 +84,8 @@ describe("GET /api/teams/[slug]", () => {
 	});
 
 	it("returns summary field (null when not cached)", async () => {
-		const req = jsonRequest("http://localhost/api/teams/recruiting");
-		const res = await GET_SLUG(req, { params: { slug: "recruiting" } });
+		const req = jsonRequest("http://localhost/api/teams/product");
+		const res = await GET_SLUG(req, { params: { slug: "product" } });
 		const data = await parseJson(res);
 
 		expect(data).toHaveProperty("summary");

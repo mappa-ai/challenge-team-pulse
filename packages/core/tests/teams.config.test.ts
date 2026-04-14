@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { getTeamBySlug, teams } from "../src/teams.config";
 
 describe("teams config", () => {
-	it("has exactly 4 teams defined", () => {
-		expect(teams).toHaveLength(4);
+	it("has exactly 1 team defined", () => {
+		expect(teams).toHaveLength(1);
 	});
 
 	it("each team has required fields", () => {
@@ -34,10 +34,10 @@ describe("teams config", () => {
 
 	describe("getTeamBySlug", () => {
 		it("returns the correct team for a valid slug", () => {
-			const platform = getTeamBySlug("platform");
-			expect(platform).toBeDefined();
-			expect(platform!.name).toBe("Platform");
-			expect(platform!.slug).toBe("platform");
+			const product = getTeamBySlug("product");
+			expect(product).toBeDefined();
+			expect(product!.name).toBe("Product Team");
+			expect(product!.slug).toBe("product");
 		});
 
 		it("returns each configured team", () => {
