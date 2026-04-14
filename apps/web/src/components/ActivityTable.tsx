@@ -29,15 +29,27 @@ function extractRepo(url: string): string {
 function StatusBadge({ status }: { status?: string }) {
 	if (!status) return <span className="text-gray-600">-</span>;
 
+	const key = status.toLowerCase();
 	const styles: Record<string, string> = {
+		// GitHub statuses
 		merged: "bg-purple-500/15 text-purple-300 border-purple-500/20",
 		closed: "bg-gray-500/15 text-gray-400 border-gray-500/20",
 		open: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+		// Linear statuses
+		"in progress": "bg-yellow-500/15 text-yellow-300 border-yellow-500/20",
+		"to do": "bg-blue-500/15 text-blue-300 border-blue-500/20",
+		todo: "bg-blue-500/15 text-blue-300 border-blue-500/20",
+		done: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+		canceled: "bg-gray-500/15 text-gray-400 border-gray-500/20",
+		cancelled: "bg-gray-500/15 text-gray-400 border-gray-500/20",
+		backlog: "bg-gray-500/15 text-gray-500 border-gray-500/20",
+		triage: "bg-orange-500/15 text-orange-300 border-orange-500/20",
+		"in review": "bg-indigo-500/15 text-indigo-300 border-indigo-500/20",
 	};
 
 	return (
 		<span
-			className={`inline-flex px-2 py-0.5 text-xs rounded-md border ${styles[status] ?? styles.open}`}
+			className={`inline-flex px-2 py-0.5 text-xs rounded-md border ${styles[key] ?? "bg-gray-500/15 text-gray-400 border-gray-500/20"}`}
 		>
 			{status}
 		</span>

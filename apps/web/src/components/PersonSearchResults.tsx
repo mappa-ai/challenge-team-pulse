@@ -9,18 +9,38 @@ interface PersonSearchResultsProps {
 	activities: ActivityItem[];
 }
 
+const DONE_STATES = new Set(["done", "closed", "canceled", "cancelled"]);
+const IN_PROGRESS_STATES = new Set(["in progress", "in review"]);
+
 function computeMetrics(activities: ActivityItem[]) {
 	const linearIssues = activities.filter((a) => a.type === "linear_issue");
 	const prs = activities.filter((a) => a.type === "pr");
-	const closed = linearIssues.filter((a) => a.status === "closed").length;
-	const open = linearIssues.filter((a) => a.status === "open").length;
+
+	const done = linearIssues.filter((a) => DONE_STATES.has((a.status ?? "").toLowerCase())).length;
+	const inProgress = linearIssues.filter((a) =>
+		IN_PROGRESS_STATES.has((a.status ?? "").toLowerCase()),
+	).length;
+	const todo = linearIssues.filter(
+		(a) =>
+			!DONE_STATES.has((a.status ?? "").toLowerCase()) &&
+			!IN_PROGRESS_STATES.has((a.status ?? "").toLowerCase()),
+	).length;
 	const total = linearIssues.length;
-	const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+	const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
 
 	const mergedPrs = prs.filter((a) => a.status === "merged").length;
 	const openPrs = prs.filter((a) => a.status === "open").length;
 
-	return { closed, open, total, completionRate, mergedPrs, openPrs, totalPrs: prs.length };
+	return {
+		done,
+		inProgress,
+		todo,
+		total,
+		completionRate,
+		mergedPrs,
+		openPrs,
+		totalPrs: prs.length,
+	};
 }
 
 function CircularProgress({ percent, size = 120 }: { percent: number; size?: number }) {
@@ -151,7 +171,7 @@ export function PersonSearchResults({ query, summary, activities }: PersonSearch
 					<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6 flex flex-col items-center justify-center">
 						<CircularProgress percent={metrics.completionRate} />
 						<p className="text-xs text-gray-500 mt-3">
-							{metrics.closed} of {metrics.total} issues resolved
+							{metrics.done} of {metrics.total} issues done
 						</p>
 					</div>
 
@@ -161,13 +181,14 @@ export function PersonSearchResults({ query, summary, activities }: PersonSearch
 							Linear Status
 						</h4>
 						<div className="space-y-3">
+							<StatusBar label="Done" value={metrics.done} total={metrics.total} color="#10b981" />
 							<StatusBar
-								label="Closed"
-								value={metrics.closed}
+								label="In Progress"
+								value={metrics.inProgress}
 								total={metrics.total}
-								color="#10b981"
+								color="#eab308"
 							/>
-							<StatusBar label="Open" value={metrics.open} total={metrics.total} color="#6366f1" />
+							<StatusBar label="To Do" value={metrics.todo} total={metrics.total} color="#6366f1" />
 						</div>
 						{metrics.totalPrs > 0 && (
 							<>
@@ -198,7 +219,7 @@ export function PersonSearchResults({ query, summary, activities }: PersonSearch
 						<MetricCard
 							label="Linear Issues"
 							value={metrics.total}
-							sub={`${metrics.closed} closed · ${metrics.open} open`}
+							sub={`${metrics.done} done · ${metrics.inProgress} in progress · ${metrics.todo} to do`}
 							color="#818cf8"
 						/>
 					</div>

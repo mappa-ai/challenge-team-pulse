@@ -37,7 +37,7 @@ export async function fetchLinearIssues(teamId: string, hoursBack = 336): Promis
 					author: assignee?.name ?? "unassigned",
 					timestamp: issue.updatedAt.toISOString(),
 					url: issue.url,
-					status: mapLinearState(state?.type),
+					status: state?.name ?? "unknown",
 					labels,
 					identifier: issue.identifier,
 				});
@@ -87,7 +87,7 @@ export async function fetchLinearIssuesByAssignee(
 					author: assignee?.name ?? "unassigned",
 					timestamp: issue.updatedAt.toISOString(),
 					url: issue.url,
-					status: mapLinearState(state?.type),
+					status: state?.name ?? "unknown",
 					labels,
 					identifier: issue.identifier,
 				});
@@ -162,10 +162,4 @@ export async function fetchLinearProjects(teamId: string): Promise<ActivityItem[
 		console.error(`Error fetching Linear projects for team "${teamId}":`, err);
 		return [];
 	}
-}
-
-function mapLinearState(stateType?: string): "open" | "closed" | undefined {
-	if (!stateType) return undefined;
-	if (stateType === "completed" || stateType === "canceled") return "closed";
-	return "open";
 }

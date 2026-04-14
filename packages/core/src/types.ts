@@ -5,7 +5,7 @@ export interface ActivityItem {
 	author: string;
 	timestamp: string;
 	url: string;
-	status?: "open" | "merged" | "closed";
+	status?: string;
 	labels?: string[];
 	identifier?: string;
 }
