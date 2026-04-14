@@ -5,7 +5,7 @@ const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 export async function fetchGitHubActivity(
 	repos: string[],
-	hoursBack = 48,
+	hoursBack = 336,
 ): Promise<ActivityItem[]> {
 	const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
 	const items: ActivityItem[] = [];
