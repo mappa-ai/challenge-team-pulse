@@ -1,10 +1,10 @@
 # Team Pulse
 
-Internal ops dashboard that summarizes what each team is working on — powered by a **multi-agent AI system**. Claude-based agents autonomously fetch data from **GitHub**, **Linear**, and **Slack**, then synthesize concise team snapshots for leadership.
+Internal engineering dashboard that tracks team performance across **GitHub** and **Linear** — powered by a **multi-agent AI system**. Claude-based agents autonomously fetch data, analyze individual and team performance, and generate actionable insights for leadership.
 
 ## Architecture
 
-### Multi-Agent System (v2)
+### Multi-Agent System
 
 ```
                     ┌───────────────────────┐
@@ -39,25 +39,54 @@ Internal ops dashboard that summarizes what each team is working on — powered 
          │      (Claude AI)      │
          └───────┬───────┬───────┘
                  │       │
-   tool_use      │       │      tool_use
+   Alias Map     │       │    Alias Map
+  (GitHub login) │       │ (Linear name)
          ┌───────┘       └───────┐
          ▼                       ▼
-┌──────────────────┐   ┌──────────────────┐
-│ search_github    │   │ search_linear    │
-│ _activity        │   │ _activity        │
-│ (by username)    │   │ (by display name)│
-└────────┬─────────┘   └────────┬─────────┘
-         ▼                       ▼
    GitHub API              Linear API
+   (by username)        (by assignee name)
 ```
 
-A dedicated agent for searching a specific person's activity across all teams. Handles the GitHub username vs Linear display name mismatch automatically.
+A dedicated agent for searching a specific person's activity. Uses an **alias map** that bridges GitHub usernames and Linear display names automatically (e.g., searching "Juan" finds `jgtavarez` on GitHub and "Juan Gabriel Tavarez" on Linear).
 
-### Single-Shot Mode (v1)
+### IA Mario — Team Insights Engine
 
-The original pipeline is still available as the default: fetch all data upfront, normalize, send to Claude in one prompt.
+Claude-powered analysis that reviews all team members' metrics and generates:
+- Weekly performance summary
+- Velocity assessment
+- Top performers highlights
+- Risk identification
+- 3 actionable recommendations for the next sprint
 
 Each agent runs a **tool_use loop**: Claude decides which tools to call, we execute them, send results back, repeat until Claude has enough data to produce its analysis.
+
+## Dashboard Features
+
+### Overview Dashboard
+- **Team Leaderboard** — All members ranked by activity with:
+  - Linear issues (done/total), PRs, commits per person
+  - Completion rate progress bar with color coding
+  - Click any member to see their full analytics
+- **Stats Row** — Team Members, Issues Done, Pull Requests, Commits, Avg Completion %
+- **Donut Chart** — Issue distribution (Done / In Progress / To Do)
+- **GitHub Activity** summary card
+- **IA Mario Analysis** button — generates AI team insights on demand
+
+### Person Search (`/search`)
+- Search any team member by name (supports partial matches)
+- **AI Summary** — IA Mario analyzes the person's contributions
+- **Circular completion chart** with % done
+- **Status breakdown bars** (Done / In Progress / To Do for Linear, Merged / Open for PRs)
+- **Metric cards** (total activity, issue counts)
+- **Activity tables** with Linear issue IDs (DEV-2742), real Linear states (In Progress, To Do, Backlog, Done), and GitHub PR status
+
+### Team Detail Page (`/team/[slug]`)
+Two tabs:
+- **Summary** — AI-generated snapshot (working on, recent changes, blocked/at risk, sources)
+- **Activity** — Data tables for Pull Requests, Linear Issues (with IDs and real states), GitHub Issues, and Commits
+
+### Sidebar Navigation
+Fixed sidebar with team links, People Search shortcut, and embedded search bar.
 
 ## Monorepo Structure
 
@@ -65,46 +94,48 @@ Each agent runs a **tool_use loop**: Claude decides which tools to call, we exec
 team-pulse/
 ├── apps/
 │   └── web/                        @team-pulse/web — Next.js 14 dashboard
-│       ├── src/app/                Pages + API routes
+│       ├── src/app/
 │       │   ├── api/
 │       │   │   ├── teams/          GET /api/teams, GET /api/teams/[slug]
-│       │   │   ├── refresh/        POST /api/refresh/[slug] (v1/v2)
+│       │   │   ├── refresh/        POST /api/refresh/[slug] (?v=2 for multi-agent)
 │       │   │   ├── activity/       GET /api/activity/[slug] — raw activity data
-│       │   │   ├── search/person/  POST /api/search/person — person search agent
+│       │   │   ├── members/        GET /api/members — team leaderboard data
+│       │   │   ├── insights/       POST /api/insights — IA Mario team analysis
+│       │   │   ├── search/person/  POST /api/search/person — person search
 │       │   │   └── ingest/         POST slack/github ingestion
-│       │   ├── team/[slug]/        Team detail page (Summary + Activity tabs)
-│       │   └── search/             Person search results page
+│       │   ├── team/[slug]/        Team detail (Summary + Activity tabs)
+│       │   └── search/             Person search with analytics
 │       ├── src/components/
-│       │   ├── Sidebar.tsx         Fixed sidebar with team nav + search
-│       │   ├── ActivityTable.tsx   Reusable dark-themed data table
-│       │   ├── TabBar.tsx          Tab switcher component
-│       │   ├── StatCard.tsx        Metric card for dashboard
-│       │   ├── PersonSearchBar.tsx Search input (navigates to /search)
-│       │   ├── PersonSearchResults.tsx  AI summary + grouped activity tables
-│       │   ├── TeamCard.tsx        Team card for dashboard grid
-│       │   ├── SummaryView.tsx     AI-generated summary display
+│       │   ├── Sidebar.tsx         Fixed sidebar with nav + search
+│       │   ├── ActivityTable.tsx   Dark-themed table with status badges
+│       │   ├── PersonSearchResults.tsx  Analytics dashboard per person
+│       │   ├── TabBar.tsx          Tab switcher
+│       │   ├── StatCard.tsx        Metric card
+│       │   ├── PersonSearchBar.tsx Search input
+│       │   ├── TeamCard.tsx        Team card
+│       │   ├── SummaryView.tsx     AI summary display
 │       │   ├── FreshnessIndicator.tsx  Time-since-update badge
-│       │   └── SourceLink.tsx      External source link pill
-│       └── tests/                  Integration tests (API routes)
+│       │   └── SourceLink.tsx      External source link
+│       └── tests/                  Integration tests
 │
 ├── packages/
-│   └── core/                       @team-pulse/core — shared business logic
+│   └── core/                       @team-pulse/core — business logic
 │       ├── src/
-│       │   ├── agents/             Multi-agent system
+│       │   ├── agents/
 │       │   │   ├── types.ts        ToolHandler, AgentConfig, AgentResult
 │       │   │   ├── runner.ts       Generic tool_use loop (max 10 iterations)
 │       │   │   ├── github-agent.ts GitHub Agent (3 tools)
 │       │   │   ├── linear-agent.ts Linear Agent (3 tools)
 │       │   │   ├── orchestrator.ts Orchestrator (delegates to sub-agents)
-│       │   │   └── person-agent.ts Person Search Agent (2 tools)
+│       │   │   └── person-agent.ts Person Search Agent with alias map
 │       │   ├── github.ts           GitHub API client (Octokit)
-│       │   ├── linear.ts           Linear API client (@linear/sdk)
-│       │   ├── slack.ts            Slack API client (supports channel IDs + names)
+│       │   ├── linear.ts           Linear API client with assignee search
+│       │   ├── slack.ts            Slack API client (channel IDs + names)
 │       │   ├── claude.ts           Single-shot summarization (v1)
 │       │   ├── cache.ts            In-memory cache with 15min TTL
 │       │   ├── normalizer.ts       Activity normalization
-│       │   ├── teams.config.ts     Team definitions (4 teams)
-│       │   └── types.ts            Shared types
+│       │   ├── teams.config.ts     Team definitions
+│       │   └── types.ts            Shared types (ActivityItem with identifier)
 │       └── tests/                  Unit + agent tests
 │
 ├── biome.json                      Formatter + linter (Biome)
@@ -155,8 +186,8 @@ LINEAR_API_KEY=lin_api_your-key
 |-------|-------------|---------------|
 | `ANTHROPIC_API_KEY` | All modes | [console.anthropic.com](https://console.anthropic.com) |
 | `GITHUB_TOKEN` | GitHub data | Settings > Developer > PAT (scope: `repo`) |
-| `LINEAR_API_KEY` | Linear data (v2) | Settings > API > Personal API keys |
-| `SLACK_BOT_TOKEN` | Slack data (v1) | Slack App > OAuth > Bot Token (scopes: `channels:read`, `channels:history`, `groups:read`, `groups:history`) |
+| `LINEAR_API_KEY` | Linear data | Settings > API > Personal API keys |
+| `SLACK_BOT_TOKEN` | Slack data | Slack App > OAuth > Bot Token (scopes: `channels:read`, `channels:history`, `groups:read`, `groups:history`) |
 
 ### Run
 
@@ -164,61 +195,36 @@ LINEAR_API_KEY=lin_api_your-key
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and hit **Refresh All** to generate summaries.
+Open [http://localhost:3000](http://localhost:3000) to see the dashboard with team leaderboard. Click **IA Mario Analysis** to generate AI insights.
 
-## Dashboard Features
+## Person Alias Map
 
-### Sidebar Navigation
+The person search bridges GitHub usernames and Linear display names automatically:
 
-Fixed sidebar with team links, active state highlighting, and an embedded person search bar.
+| Search Term | GitHub Username | Linear Name |
+|-------------|----------------|-------------|
+| Juan | jgtavarez | Juan Gabriel Tavarez |
+| Daniel Moretti | drsh4dow | Daniel Moretti |
+| Mateus | mateusmenesesDev | Mateus Meneses |
+| Greynner | Greynner | greynner@mappa.ai |
+| Yordi | yordi024 | yordi@mappa.ai |
+| Robinson | robinsonur | Robinson Ureña Rodríguez |
 
-### Team Detail Page
+Aliases are defined in `packages/core/src/agents/person-agent.ts`. Add new team members there.
 
-Two tabs per team:
+## API Endpoints
 
-- **Summary** — AI-generated snapshot (working on, recent changes, blocked/at risk, sources)
-- **Activity** — Data tables showing:
-  - Pull Requests (author, title, repo, status, timestamp)
-  - Linear Issues (assignee, title, status, labels, timestamp)
-  - GitHub Issues and Commits
-
-### Person Search
-
-Type a person's name in the sidebar search bar to run the Person Search Agent. It searches across all configured GitHub repos and Linear teams, then returns:
-
-- An AI-generated summary of the person's recent activity
-- Grouped tables of their PRs, issues, commits, and Linear items
-
-```bash
-curl -X POST http://localhost:3000/api/search/person \
-  -H "Content-Type: application/json" \
-  -d '{"query": "greynner"}'
-```
-
-## Agent Modes
-
-### v1: Single-Shot (default)
-
-```bash
-curl -X POST http://localhost:3000/api/refresh/platform
-```
-
-Fetches all Slack + GitHub data upfront, normalizes it, sends everything to Claude in one prompt.
-
-### v2: Multi-Agent Orchestrator
-
-```bash
-curl -X POST "http://localhost:3000/api/refresh/platform?v=2"
-```
-
-The orchestrator agent decides what data to gather, delegates to specialized GitHub and Linear agents, each of which autonomously uses their tools to fetch relevant data, then the orchestrator synthesizes a unified team snapshot.
-
-**Agent flow:**
-1. Orchestrator receives the request and calls `run_github_analysis` and `run_linear_analysis`
-2. GitHub Agent uses `fetch_pull_requests`, `fetch_issues`, `fetch_commits` as needed
-3. Linear Agent uses `fetch_linear_issues`, `fetch_linear_cycles`, `fetch_linear_projects` as needed
-4. Each sub-agent returns a structured analysis to the orchestrator
-5. Orchestrator synthesizes both analyses into a final `TeamSummary`
+| Method | Route                     | Description                                    |
+|--------|---------------------------|------------------------------------------------|
+| GET    | `/api/teams`              | List all teams with cached summaries           |
+| GET    | `/api/teams/[slug]`       | Get a specific team and its summary            |
+| GET    | `/api/activity/[slug]`    | Raw activity items (PRs, issues, Linear) for a team |
+| GET    | `/api/members`            | Team leaderboard with per-member GitHub + Linear stats |
+| POST   | `/api/refresh/[slug]`     | Generate AI summary (v2 multi-agent with `?v=2`) |
+| POST   | `/api/search/person`      | Person search with AI analysis + all activity  |
+| POST   | `/api/insights`           | IA Mario team performance analysis             |
+| POST   | `/api/ingest/slack`       | Ingest recent Slack messages for a team        |
+| POST   | `/api/ingest/github`      | Ingest recent PRs, issues, commits for a team  |
 
 ## Scripts
 
@@ -231,43 +237,6 @@ The orchestrator agent decides what data to gather, delegates to specialized Git
 | `bun run format`   | Biome format only                         |
 | `bun run typecheck`| TypeScript type-check all packages        |
 | `bun run lazycheck`| Biome check + full build                  |
-
-## API Endpoints
-
-| Method | Route                     | Description                                    |
-|--------|---------------------------|------------------------------------------------|
-| GET    | `/api/teams`              | List all teams with cached summaries           |
-| GET    | `/api/teams/[slug]`       | Get a specific team and its summary            |
-| GET    | `/api/activity/[slug]`    | Get raw activity items (PRs, issues, commits, Linear) for a team |
-| POST   | `/api/refresh/[slug]`     | One-click refresh (v1 default, v2 with `?v=2`) |
-| POST   | `/api/search/person`      | Search a person's activity across all teams    |
-| POST   | `/api/ingest/slack`       | Ingest recent Slack messages for a team        |
-| POST   | `/api/ingest/github`      | Ingest recent PRs, issues, commits for a team  |
-
-## Teams Configuration
-
-Teams are defined in `packages/core/src/teams.config.ts`:
-
-```typescript
-{
-  slug: "platform",
-  name: "Platform",
-  slackChannels: ["C0600AB9J2Y"],       // supports channel IDs or names
-  githubRepos: [
-    "mappa-ai/mappa-main",
-    "mappa-ai/mappa-db",
-    "mappa-ai/mappa-ui",
-    "mappa-ai/mappa-mastra",
-    "mappa-ai/mappa-studio",
-  ],
-  linearTeamIds: ["5fdabca0-dc12-406f-9282-8e1806a923d2"],
-  color: "#4a7aff",
-}
-```
-
-**Current teams:** Platform, AI & Voice, Recruiting & Agents, Data & Infrastructure.
-
-Add Linear team IDs to enable the Linear agent for a team. Slack channels accept both channel names (`general`) and channel IDs (`C0600AB9J2Y`).
 
 ## Tests
 
