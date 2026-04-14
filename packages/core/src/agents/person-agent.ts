@@ -5,18 +5,64 @@ import type { ActivityItem } from "../types";
 import { runAgent } from "./runner";
 import type { AgentResult, ToolHandler } from "./types";
 
-const SYSTEM_PROMPT = `You are a person activity researcher. You have tools to search for a specific person's activity across GitHub and Linear.
+/**
+ * Known aliases: maps search terms to GitHub usernames and Linear display names.
+ * This bridges the gap between GitHub logins and Linear display names.
+ */
+const PERSON_ALIASES: Record<string, { github: string[]; linear: string[] }> = {
+	juan: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
+	"juan gabriel": { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
+	tavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
+	jgtavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
+	daniel: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
+	moretti: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
+	"daniel moretti": { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
+	drsh4dow: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
+	mateus: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
+	meneses: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
+	"mateus meneses": { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
+	mateusmenesesdev: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
+	greynner: { github: ["Greynner"], linear: ["greynner"] },
+	"greynner moreno": { github: ["Greynner"], linear: ["greynner"] },
+	yordi: { github: ["yordi024"], linear: ["yordi"] },
+	yordi024: { github: ["yordi024"], linear: ["yordi"] },
+	robinson: { github: ["robinsonur"], linear: ["Robinson Ureña"] },
+	"robinson ureña": { github: ["robinsonur"], linear: ["Robinson Ureña"] },
+	robinsonur: { github: ["robinsonur"], linear: ["Robinson Ureña"] },
+	agustin: { github: [], linear: ["Agustín Ale"] },
+	"agustin ale": { github: [], linear: ["Agustín Ale"] },
+	taylor: { github: [], linear: ["Taylor Bryn Jackson West"] },
+	rvirgilli: { github: ["rvirgilli"], linear: [] },
+	rafaello: { github: ["rvirgilli"], linear: [] },
+};
 
-IMPORTANT: GitHub uses login usernames (e.g. "greynnermorenomarcano") while Linear uses display names (e.g. "Greynner Moreno"). The user may provide either format. Use both tools and try variations of the name.
+function resolveAliases(query: string): { githubUsernames: string[]; linearNames: string[] } {
+	const key = query.toLowerCase().trim();
 
-After gathering data, return your final answer as JSON with these exact keys:
+	// Direct match in alias map
+	const alias = PERSON_ALIASES[key];
+	if (alias) {
+		return { githubUsernames: alias.github, linearNames: alias.linear };
+	}
+
+	// Partial match — search all keys
+	for (const [aliasKey, aliasValue] of Object.entries(PERSON_ALIASES)) {
+		if (aliasKey.includes(key) || key.includes(aliasKey)) {
+			return { githubUsernames: aliasValue.github, linearNames: aliasValue.linear };
+		}
+	}
+
+	// No match — use query as-is for both
+	return { githubUsernames: [query], linearNames: [query] };
+}
+
+const SYSTEM_PROMPT = `You are a person activity researcher. You will receive data about a person's activity across GitHub and Linear.
+
+Analyze the data and return your final answer as JSON with these exact keys:
 - "summary": A concise paragraph about what this person has been working on, their contributions, and current focus
 
 Be specific. Use names and link to artifacts.
 Always return valid JSON — no markdown, no code fences, no extra text.`;
-
-/** Collected activities from tool executions — populated as side effect during agent run */
-let collectedActivities: ActivityItem[] = [];
 
 export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolHandler[] {
 	const tools: ToolHandler[] = [];
@@ -66,7 +112,6 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 						),
 					);
 				}
-				collectedActivities.push(...results);
 				return results;
 			},
 		});
@@ -96,7 +141,6 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 					const issues = await fetchLinearIssuesByAssignee(teamId, person_name);
 					results.push(...issues);
 				}
-				collectedActivities.push(...results);
 				return results;
 			},
 		});
@@ -141,22 +185,85 @@ export async function searchPerson(
 		linearTeamIds = [...new Set(linearTeamIds)];
 	}
 
-	// Reset collected activities before agent run
-	collectedActivities = [];
+	// Resolve aliases to get correct GitHub usernames and Linear names
+	const { githubUsernames, linearNames } = resolveAliases(query);
 
-	const result = await runPersonAgent(query, repos, linearTeamIds);
+	// Fetch data directly using resolved aliases (no agent needed for data)
+	const allActivities: ActivityItem[] = [];
 
-	// Parse summary from Claude, but use directly collected activities
+	// GitHub: search with each resolved username
+	if (repos.length > 0) {
+		const since = new Date(Date.now() - 336 * 3600000).toISOString();
+		for (const username of githubUsernames) {
+			const needle = username.toLowerCase();
+			for (const repo of repos) {
+				const [owner, name] = repo.split("/");
+				if (!owner || !name) continue;
+
+				const [prs, issues, commits] = await Promise.all([
+					fetchPRs(owner, name, since),
+					fetchIssues(owner, name, since),
+					fetchCommits(owner, name, since),
+				]);
+
+				allActivities.push(
+					...[...prs, ...issues, ...commits].filter((item) =>
+						item.author.toLowerCase().includes(needle),
+					),
+				);
+			}
+		}
+	}
+
+	// Linear: search with each resolved name
+	for (const linearName of linearNames) {
+		for (const teamId of linearTeamIds) {
+			const issues = await fetchLinearIssuesByAssignee(teamId, linearName);
+			allActivities.push(...issues);
+		}
+	}
+
+	// Deduplicate by URL
+	const seen = new Set<string>();
+	const dedupedActivities = allActivities.filter((item) => {
+		if (seen.has(item.url)) return false;
+		seen.add(item.url);
+		return true;
+	});
+
+	// Run agent only for the AI summary, passing the collected data
 	let summary = "";
-	try {
-		const parsed = JSON.parse(result.text) as { summary: string };
-		summary = parsed.summary;
-	} catch {
-		summary = result.text;
+	if (dedupedActivities.length > 0) {
+		const dataForSummary = JSON.stringify(
+			dedupedActivities.map((a) => ({
+				source: a.source,
+				type: a.type,
+				title: a.title,
+				status: a.status,
+				identifier: a.identifier,
+				url: a.url,
+			})),
+		);
+
+		const result = await runAgent({
+			systemPrompt: SYSTEM_PROMPT,
+			userPrompt: `Here is the activity data for "${query}":\n\n${dataForSummary}\n\nAnalyze this data and provide a summary as JSON.`,
+			tools: [],
+			maxTokens: 2048,
+		});
+
+		try {
+			const parsed = JSON.parse(result.text) as { summary: string };
+			summary = parsed.summary;
+		} catch {
+			summary = result.text;
+		}
+	} else {
+		summary = `No activity found for "${query}" across configured repositories and Linear teams.`;
 	}
 
 	return {
 		summary,
-		activities: collectedActivities,
+		activities: dedupedActivities,
 	};
 }
