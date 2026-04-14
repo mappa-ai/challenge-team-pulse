@@ -11,10 +11,12 @@ IMPORTANT: GitHub uses login usernames (e.g. "greynnermorenomarcano") while Line
 
 After gathering data, return your final answer as JSON with these exact keys:
 - "summary": A concise paragraph about what this person has been working on, their contributions, and current focus
-- "activities": The raw activity items you found (pass through unchanged from tool results)
 
 Be specific. Use names and link to artifacts.
 Always return valid JSON — no markdown, no code fences, no extra text.`;
+
+/** Collected activities from tool executions — populated as side effect during agent run */
+let collectedActivities: ActivityItem[] = [];
 
 export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolHandler[] {
 	const tools: ToolHandler[] = [];
@@ -33,7 +35,7 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 						},
 						hours_back: {
 							type: "number",
-							description: "How many hours back to look (default: 168 = 1 week)",
+							description: "How many hours back to look (default: 336 = 2 weeks)",
 						},
 					},
 					required: ["username"],
@@ -44,7 +46,7 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 					username: string;
 					hours_back?: number;
 				};
-				const since = new Date(Date.now() - (hours_back ?? 168) * 3600000).toISOString();
+				const since = new Date(Date.now() - (hours_back ?? 336) * 3600000).toISOString();
 				const needle = username.toLowerCase();
 
 				const results: ActivityItem[] = [];
@@ -64,6 +66,7 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 						),
 					);
 				}
+				collectedActivities.push(...results);
 				return results;
 			},
 		});
@@ -83,7 +86,7 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 						},
 						hours_back: {
 							type: "number",
-							description: "How many hours back to look (default: 168 = 1 week)",
+							description: "How many hours back to look (default: 336 = 2 weeks)",
 						},
 					},
 					required: ["person_name"],
@@ -98,9 +101,10 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 
 				const results: ActivityItem[] = [];
 				for (const teamId of linearTeamIds) {
-					const issues = await fetchLinearIssues(teamId, hours_back ?? 168);
+					const issues = await fetchLinearIssues(teamId, hours_back ?? 336);
 					results.push(...issues.filter((item) => item.author.toLowerCase().includes(needle)));
 				}
+				collectedActivities.push(...results);
 				return results;
 			},
 		});
@@ -145,15 +149,22 @@ export async function searchPerson(
 		linearTeamIds = [...new Set(linearTeamIds)];
 	}
 
+	// Reset collected activities before agent run
+	collectedActivities = [];
+
 	const result = await runPersonAgent(query, repos, linearTeamIds);
 
-	const parsed = JSON.parse(result.text) as {
-		summary: string;
-		activities: ActivityItem[];
-	};
+	// Parse summary from Claude, but use directly collected activities
+	let summary = "";
+	try {
+		const parsed = JSON.parse(result.text) as { summary: string };
+		summary = parsed.summary;
+	} catch {
+		summary = result.text;
+	}
 
 	return {
-		summary: parsed.summary,
-		activities: parsed.activities ?? [],
+		summary,
+		activities: collectedActivities,
 	};
 }
