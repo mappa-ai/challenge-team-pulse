@@ -1,0 +1,18 @@
+{
+	"name": "team-pulse",
+	"private": true,
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"dev": "bun run --filter @team-pulse/web dev",
+		"build": "bun run --filter @team-pulse/core build && bun run --filter @team-pulse/web build",
+		"format": "bunx biome format --write .",
+		"check": "bunx biome check --write .",
+		"lazycheck": "bunx biome check --write . && bun run build",
+		"typecheck": "bun run --filter '*' typecheck",
+		"test": "bun test packages/core/tests apps/web/tests"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"typescript": "^5"
+	}
+}

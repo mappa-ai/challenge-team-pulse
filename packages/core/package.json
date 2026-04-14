@@ -1,0 +1,23 @@
+{
+	"name": "@team-pulse/core",
+	"version": "0.1.0",
+	"type": "module",
+	"private": true,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --noEmit",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.88.0",
+		"@slack/web-api": "^7.15.1",
+		"octokit": "^5.0.5"
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"typescript": "^5"
+	}
+}
