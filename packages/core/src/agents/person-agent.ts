@@ -10,30 +10,39 @@ import type { AgentResult, ToolHandler } from "./types";
  * This bridges the gap between GitHub logins and Linear display names.
  */
 const PERSON_ALIASES: Record<string, { github: string[]; linear: string[] }> = {
-	juan: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
-	"juan gabriel": { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
-	tavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
-	jgtavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel Tavarez"] },
+	// Juan Gabriel Tavarez — Linear name: "Juan Gabriel Tavarez", GitHub: jgtavarez
+	juan: { github: ["jgtavarez"], linear: ["Juan Gabriel"] },
+	"juan gabriel": { github: ["jgtavarez"], linear: ["Juan Gabriel"] },
+	tavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel"] },
+	jgtavarez: { github: ["jgtavarez"], linear: ["Juan Gabriel"] },
+	// Daniel Moretti — Linear name: "Daniel Moretti", GitHub: drsh4dow
 	daniel: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
 	moretti: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
 	"daniel moretti": { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
 	drsh4dow: { github: ["drsh4dow"], linear: ["Daniel Moretti"] },
+	// Mateus Meneses — Linear name: "Mateus Meneses", GitHub: mateusmenesesDev
 	mateus: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
 	meneses: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
 	"mateus meneses": { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
 	mateusmenesesdev: { github: ["mateusmenesesDev"], linear: ["Mateus Meneses"] },
+	// Greynner — Linear name: "greynner@mappa.ai", GitHub: Greynner
 	greynner: { github: ["Greynner"], linear: ["greynner"] },
 	"greynner moreno": { github: ["Greynner"], linear: ["greynner"] },
+	// Yordi — Linear name: "yordi@mappa.ai", GitHub: yordi024
 	yordi: { github: ["yordi024"], linear: ["yordi"] },
 	yordi024: { github: ["yordi024"], linear: ["yordi"] },
+	// Robinson Ureña — Linear name: "Robinson Ureña Rodríguez", GitHub: robinsonur
 	robinson: { github: ["robinsonur"], linear: ["Robinson Ureña"] },
 	"robinson ureña": { github: ["robinsonur"], linear: ["Robinson Ureña"] },
 	robinsonur: { github: ["robinsonur"], linear: ["Robinson Ureña"] },
-	agustin: { github: [], linear: ["Agustín Ale"] },
-	"agustin ale": { github: [], linear: ["Agustín Ale"] },
-	taylor: { github: [], linear: ["Taylor Bryn Jackson West"] },
-	rvirgilli: { github: ["rvirgilli"], linear: [] },
-	rafaello: { github: ["rvirgilli"], linear: [] },
+	// Agustín Ale — Linear only
+	agustin: { github: [], linear: ["Agustín"] },
+	"agustin ale": { github: [], linear: ["Agustín"] },
+	// Taylor Bryn Jackson West — Linear only
+	taylor: { github: [], linear: ["Taylor"] },
+	// Rafaello Virgilli — GitHub: rvirgilli, Linear name: "rafaello@mappa.ai"
+	rvirgilli: { github: ["rvirgilli"], linear: ["rafaello"] },
+	rafaello: { github: ["rvirgilli"], linear: ["rafaello"] },
 };
 
 function resolveAliases(query: string): { githubUsernames: string[]; linearNames: string[] } {

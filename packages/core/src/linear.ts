@@ -68,7 +68,7 @@ export async function fetchLinearIssuesByAssignee(
 			const issues = await linear.issues({
 				filter: {
 					team: { id: { eq: teamId } },
-					assignee: { displayName: { containsIgnoreCase: assigneeName } },
+					assignee: { name: { containsIgnoreCase: assigneeName } },
 				},
 				first: 100,
 				after: cursor,
