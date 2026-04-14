@@ -30,7 +30,7 @@ export default function Dashboard() {
 		setRefreshing("all");
 		for (const team of teams) {
 			try {
-				await fetch(`/api/refresh/${team.slug}`, { method: "POST" });
+				await fetch(`/api/refresh/${team.slug}?v=2`, { method: "POST" });
 			} catch (err) {
 				console.error(`Error refreshing ${team.slug}:`, err);
 			}

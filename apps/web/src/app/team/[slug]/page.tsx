@@ -40,7 +40,7 @@ export default function TeamPage() {
 	async function refresh() {
 		setRefreshing(true);
 		try {
-			const res = await fetch(`/api/refresh/${slug}`, { method: "POST" });
+			const res = await fetch(`/api/refresh/${slug}?v=2`, { method: "POST" });
 			const data = await res.json();
 			setSummary(data.summary);
 		} catch (err) {
