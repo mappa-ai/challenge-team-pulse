@@ -2,7 +2,7 @@
 
 import type { ActivityItem } from "@team-pulse/core";
 
-type Column = "author" | "title" | "status" | "labels" | "timestamp" | "repo";
+type Column = "author" | "title" | "status" | "labels" | "timestamp" | "repo" | "id";
 
 interface ActivityTableProps {
 	items: ActivityItem[];
@@ -58,6 +58,7 @@ export function ActivityTable({
 	}
 
 	const columnLabels: Record<Column, string> = {
+		id: "ID",
 		author: "Author",
 		title: "Title",
 		status: "Status",
@@ -89,6 +90,16 @@ export function ActivityTable({
 						>
 							{columns.map((col) => (
 								<td key={col} className="px-4 py-3">
+									{col === "id" && (
+										<a
+											href={item.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-indigo-400 hover:text-indigo-300 text-xs font-mono whitespace-nowrap"
+										>
+											{item.identifier ?? "-"}
+										</a>
+									)}
 									{col === "author" && (
 										<span className="text-gray-300 font-medium">{item.author}</span>
 									)}

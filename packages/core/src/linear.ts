@@ -5,10 +5,7 @@ function getClient(): LinearClient {
 	return new LinearClient({ apiKey: process.env.LINEAR_API_KEY ?? "" });
 }
 
-export async function fetchLinearIssues(
-	teamId: string,
-	hoursBack = 336,
-): Promise<ActivityItem[]> {
+export async function fetchLinearIssues(teamId: string, hoursBack = 336): Promise<ActivityItem[]> {
 	try {
 		const linear = getClient();
 		const since = new Date(Date.now() - hoursBack * 3600000);
@@ -42,6 +39,7 @@ export async function fetchLinearIssues(
 					url: issue.url,
 					status: mapLinearState(state?.type),
 					labels,
+					identifier: issue.identifier,
 				});
 			}
 
@@ -52,6 +50,56 @@ export async function fetchLinearIssues(
 		return items;
 	} catch (err) {
 		console.error(`Error fetching Linear issues for team "${teamId}":`, err);
+		return [];
+	}
+}
+
+export async function fetchLinearIssuesByAssignee(
+	teamId: string,
+	assigneeName: string,
+): Promise<ActivityItem[]> {
+	try {
+		const linear = getClient();
+		const items: ActivityItem[] = [];
+		let hasMore = true;
+		let cursor: string | undefined;
+
+		while (hasMore) {
+			const issues = await linear.issues({
+				filter: {
+					team: { id: { eq: teamId } },
+					assignee: { displayName: { containsIgnoreCase: assigneeName } },
+				},
+				first: 100,
+				after: cursor,
+			});
+
+			for (const issue of issues.nodes) {
+				const assignee = await issue.assignee;
+				const state = await issue.state;
+				const labelConnection = await issue.labels();
+				const labels = labelConnection.nodes.map((l) => l.name);
+
+				items.push({
+					source: "linear",
+					type: "linear_issue",
+					title: issue.title,
+					author: assignee?.name ?? "unassigned",
+					timestamp: issue.updatedAt.toISOString(),
+					url: issue.url,
+					status: mapLinearState(state?.type),
+					labels,
+					identifier: issue.identifier,
+				});
+			}
+
+			hasMore = issues.pageInfo.hasNextPage;
+			cursor = issues.pageInfo.endCursor ?? undefined;
+		}
+
+		return items;
+	} catch (err) {
+		console.error(`Error fetching Linear issues by assignee "${assigneeName}":`, err);
 		return [];
 	}
 }

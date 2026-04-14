@@ -230,7 +230,7 @@ export default function TeamPage() {
 									</h3>
 									<ActivityTable
 										items={linearIssues}
-										columns={["author", "title", "status", "labels", "timestamp"]}
+										columns={["id", "author", "title", "status", "labels", "timestamp"]}
 										emptyMessage="No recent Linear issues"
 									/>
 								</div>

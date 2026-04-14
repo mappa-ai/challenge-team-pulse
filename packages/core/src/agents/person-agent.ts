@@ -1,5 +1,5 @@
 import { fetchCommits, fetchIssues, fetchPRs } from "../github";
-import { fetchLinearIssues } from "../linear";
+import { fetchLinearIssuesByAssignee } from "../linear";
 import { getTeamBySlug, teams } from "../teams.config";
 import type { ActivityItem } from "../types";
 import { runAgent } from "./runner";
@@ -76,7 +76,7 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 		tools.push({
 			definition: {
 				name: "search_linear_activity",
-				description: `Search for a person's recent Linear activity (issues, assignments) across teams. Available team IDs: ${linearTeamIds.join(", ")}`,
+				description: `Search for ALL of a person's Linear issues (no time limit). Available team IDs: ${linearTeamIds.join(", ")}`,
 				input_schema: {
 					type: "object" as const,
 					properties: {
@@ -84,25 +84,17 @@ export function makePersonTools(repos: string[], linearTeamIds: string[]): ToolH
 							type: "string",
 							description: "Person's display name to search for (case-insensitive partial match)",
 						},
-						hours_back: {
-							type: "number",
-							description: "How many hours back to look (default: 336 = 2 weeks)",
-						},
 					},
 					required: ["person_name"],
 				},
 			},
 			execute: async (input: unknown) => {
-				const { person_name, hours_back } = input as {
-					person_name: string;
-					hours_back?: number;
-				};
-				const needle = person_name.toLowerCase();
+				const { person_name } = input as { person_name: string };
 
 				const results: ActivityItem[] = [];
 				for (const teamId of linearTeamIds) {
-					const issues = await fetchLinearIssues(teamId, hours_back ?? 336);
-					results.push(...issues.filter((item) => item.author.toLowerCase().includes(needle)));
+					const issues = await fetchLinearIssuesByAssignee(teamId, person_name);
+					results.push(...issues);
 				}
 				collectedActivities.push(...results);
 				return results;

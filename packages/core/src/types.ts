@@ -7,6 +7,7 @@ export interface ActivityItem {
 	url: string;
 	status?: "open" | "merged" | "closed";
 	labels?: string[];
+	identifier?: string;
 }
 
 export interface SourceRef {

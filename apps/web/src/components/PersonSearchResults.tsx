@@ -54,7 +54,7 @@ export function PersonSearchResults({ query, summary, activities }: PersonSearch
 				<Section title="Linear Issues" count={linearIssues.length} color="text-blue-400">
 					<ActivityTable
 						items={linearIssues}
-						columns={["title", "status", "labels", "timestamp"]}
+						columns={["id", "title", "status", "labels", "timestamp"]}
 					/>
 				</Section>
 			)}

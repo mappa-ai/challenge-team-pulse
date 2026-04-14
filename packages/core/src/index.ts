@@ -9,7 +9,12 @@ export { teams, getTeamBySlug } from "./teams.config";
 // Data clients
 export { fetchSlackMessages } from "./slack";
 export { fetchGitHubActivity, fetchPRs, fetchIssues, fetchCommits } from "./github";
-export { fetchLinearIssues, fetchLinearCycles, fetchLinearProjects } from "./linear";
+export {
+	fetchLinearIssues,
+	fetchLinearIssuesByAssignee,
+	fetchLinearCycles,
+	fetchLinearProjects,
+} from "./linear";
 
 // Summarization (v1: single-shot)
 export { generateTeamSummary } from "./claude";
