@@ -38,15 +38,6 @@ export async function runAgent(config: AgentConfig): Promise<AgentResult> {
 
 			const toolResults = await Promise.all(
 				toolUseBlocks.map(async (block) => {
-					if (block.type !== "tool_use") {
-						return {
-							type: "tool_result" as const,
-							tool_use_id: "",
-							content: "Invalid block",
-							is_error: true,
-						};
-					}
-
 					const handler = toolHandlers.get(block.name);
 					if (!handler) {
 						return {
