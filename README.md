@@ -1,6 +1,6 @@
 # Team Pulse
 
-Internal ops dashboard that summarizes what each team is working on — powered by a **multi-agent AI system**. Three Claude-based agents autonomously fetch data from **GitHub** and **Linear**, then synthesize concise team snapshots for leadership.
+Internal ops dashboard that summarizes what each team is working on — powered by a **multi-agent AI system**. Claude-based agents autonomously fetch data from **GitHub**, **Linear**, and **Slack**, then synthesize concise team snapshots for leadership.
 
 ## Architecture
 
@@ -31,11 +31,33 @@ Internal ops dashboard that summarizes what each team is working on — powered 
 └─────────────────┘                          └─────────────────┘
 ```
 
-Each agent runs a **tool_use loop**: Claude decides which tools to call, we execute them, send results back, repeat until Claude has enough data to produce its analysis.
+### Person Search Agent
+
+```
+         ┌───────────────────────┐
+         │  Person Search Agent  │
+         │      (Claude AI)      │
+         └───────┬───────┬───────┘
+                 │       │
+   tool_use      │       │      tool_use
+         ┌───────┘       └───────┐
+         ▼                       ▼
+┌──────────────────┐   ┌──────────────────┐
+│ search_github    │   │ search_linear    │
+│ _activity        │   │ _activity        │
+│ (by username)    │   │ (by display name)│
+└────────┬─────────┘   └────────┬─────────┘
+         ▼                       ▼
+   GitHub API              Linear API
+```
+
+A dedicated agent for searching a specific person's activity across all teams. Handles the GitHub username vs Linear display name mismatch automatically.
 
 ### Single-Shot Mode (v1)
 
 The original pipeline is still available as the default: fetch all data upfront, normalize, send to Claude in one prompt.
+
+Each agent runs a **tool_use loop**: Claude decides which tools to call, we execute them, send results back, repeat until Claude has enough data to produce its analysis.
 
 ## Monorepo Structure
 
@@ -44,7 +66,25 @@ team-pulse/
 ├── apps/
 │   └── web/                        @team-pulse/web — Next.js 14 dashboard
 │       ├── src/app/                Pages + API routes
-│       ├── src/components/         TeamCard, SummaryView, FreshnessIndicator
+│       │   ├── api/
+│       │   │   ├── teams/          GET /api/teams, GET /api/teams/[slug]
+│       │   │   ├── refresh/        POST /api/refresh/[slug] (v1/v2)
+│       │   │   ├── activity/       GET /api/activity/[slug] — raw activity data
+│       │   │   ├── search/person/  POST /api/search/person — person search agent
+│       │   │   └── ingest/         POST slack/github ingestion
+│       │   ├── team/[slug]/        Team detail page (Summary + Activity tabs)
+│       │   └── search/             Person search results page
+│       ├── src/components/
+│       │   ├── Sidebar.tsx         Fixed sidebar with team nav + search
+│       │   ├── ActivityTable.tsx   Reusable dark-themed data table
+│       │   ├── TabBar.tsx          Tab switcher component
+│       │   ├── StatCard.tsx        Metric card for dashboard
+│       │   ├── PersonSearchBar.tsx Search input (navigates to /search)
+│       │   ├── PersonSearchResults.tsx  AI summary + grouped activity tables
+│       │   ├── TeamCard.tsx        Team card for dashboard grid
+│       │   ├── SummaryView.tsx     AI-generated summary display
+│       │   ├── FreshnessIndicator.tsx  Time-since-update badge
+│       │   └── SourceLink.tsx      External source link pill
 │       └── tests/                  Integration tests (API routes)
 │
 ├── packages/
@@ -55,14 +95,15 @@ team-pulse/
 │       │   │   ├── runner.ts       Generic tool_use loop (max 10 iterations)
 │       │   │   ├── github-agent.ts GitHub Agent (3 tools)
 │       │   │   ├── linear-agent.ts Linear Agent (3 tools)
-│       │   │   └── orchestrator.ts Orchestrator (delegates to sub-agents)
+│       │   │   ├── orchestrator.ts Orchestrator (delegates to sub-agents)
+│       │   │   └── person-agent.ts Person Search Agent (2 tools)
 │       │   ├── github.ts           GitHub API client (Octokit)
 │       │   ├── linear.ts           Linear API client (@linear/sdk)
-│       │   ├── slack.ts            Slack API client
+│       │   ├── slack.ts            Slack API client (supports channel IDs + names)
 │       │   ├── claude.ts           Single-shot summarization (v1)
 │       │   ├── cache.ts            In-memory cache with 15min TTL
 │       │   ├── normalizer.ts       Activity normalization
-│       │   ├── teams.config.ts     Team definitions
+│       │   ├── teams.config.ts     Team definitions (4 teams)
 │       │   └── types.ts            Shared types
 │       └── tests/                  Unit + agent tests
 │
@@ -115,7 +156,7 @@ LINEAR_API_KEY=lin_api_your-key
 | `ANTHROPIC_API_KEY` | All modes | [console.anthropic.com](https://console.anthropic.com) |
 | `GITHUB_TOKEN` | GitHub data | Settings > Developer > PAT (scope: `repo`) |
 | `LINEAR_API_KEY` | Linear data (v2) | Settings > API > Personal API keys |
-| `SLACK_BOT_TOKEN` | Slack data (v1) | Slack App > OAuth > Bot Token |
+| `SLACK_BOT_TOKEN` | Slack data (v1) | Slack App > OAuth > Bot Token (scopes: `channels:read`, `channels:history`, `groups:read`, `groups:history`) |
 
 ### Run
 
@@ -125,12 +166,41 @@ bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) and hit **Refresh All** to generate summaries.
 
+## Dashboard Features
+
+### Sidebar Navigation
+
+Fixed sidebar with team links, active state highlighting, and an embedded person search bar.
+
+### Team Detail Page
+
+Two tabs per team:
+
+- **Summary** — AI-generated snapshot (working on, recent changes, blocked/at risk, sources)
+- **Activity** — Data tables showing:
+  - Pull Requests (author, title, repo, status, timestamp)
+  - Linear Issues (assignee, title, status, labels, timestamp)
+  - GitHub Issues and Commits
+
+### Person Search
+
+Type a person's name in the sidebar search bar to run the Person Search Agent. It searches across all configured GitHub repos and Linear teams, then returns:
+
+- An AI-generated summary of the person's recent activity
+- Grouped tables of their PRs, issues, commits, and Linear items
+
+```bash
+curl -X POST http://localhost:3000/api/search/person \
+  -H "Content-Type: application/json" \
+  -d '{"query": "greynner"}'
+```
+
 ## Agent Modes
 
 ### v1: Single-Shot (default)
 
 ```bash
-curl -X POST http://localhost:3000/api/refresh/ops
+curl -X POST http://localhost:3000/api/refresh/platform
 ```
 
 Fetches all Slack + GitHub data upfront, normalizes it, sends everything to Claude in one prompt.
@@ -138,7 +208,7 @@ Fetches all Slack + GitHub data upfront, normalizes it, sends everything to Clau
 ### v2: Multi-Agent Orchestrator
 
 ```bash
-curl -X POST "http://localhost:3000/api/refresh/ops?v=2"
+curl -X POST "http://localhost:3000/api/refresh/platform?v=2"
 ```
 
 The orchestrator agent decides what data to gather, delegates to specialized GitHub and Linear agents, each of which autonomously uses their tools to fetch relevant data, then the orchestrator synthesizes a unified team snapshot.
@@ -156,7 +226,7 @@ The orchestrator agent decides what data to gather, delegates to specialized Git
 |--------------------|-------------------------------------------|
 | `bun run dev`      | Start Next.js dev server                  |
 | `bun run build`    | Type-check core + build web               |
-| `bun run test`     | Run all 76 tests across core and web      |
+| `bun run test`     | Run all 82 tests across core and web      |
 | `bun run check`    | Biome lint + format                       |
 | `bun run format`   | Biome format only                         |
 | `bun run typecheck`| TypeScript type-check all packages        |
@@ -164,14 +234,15 @@ The orchestrator agent decides what data to gather, delegates to specialized Git
 
 ## API Endpoints
 
-| Method | Route                  | Description                                    |
-|--------|------------------------|------------------------------------------------|
-| GET    | `/api/teams`           | List all teams with cached summaries           |
-| GET    | `/api/teams/[slug]`    | Get a specific team and its summary            |
-| POST   | `/api/ingest/slack`    | Ingest recent Slack messages for a team        |
-| POST   | `/api/ingest/github`   | Ingest recent PRs, issues, commits for a team  |
-| POST   | `/api/summarize`       | Run full pipeline (v1 default, v2 with `v: "2"` in body) |
-| POST   | `/api/refresh/[slug]`  | One-click refresh (v1 default, v2 with `?v=2`) |
+| Method | Route                     | Description                                    |
+|--------|---------------------------|------------------------------------------------|
+| GET    | `/api/teams`              | List all teams with cached summaries           |
+| GET    | `/api/teams/[slug]`       | Get a specific team and its summary            |
+| GET    | `/api/activity/[slug]`    | Get raw activity items (PRs, issues, commits, Linear) for a team |
+| POST   | `/api/refresh/[slug]`     | One-click refresh (v1 default, v2 with `?v=2`) |
+| POST   | `/api/search/person`      | Search a person's activity across all teams    |
+| POST   | `/api/ingest/slack`       | Ingest recent Slack messages for a team        |
+| POST   | `/api/ingest/github`      | Ingest recent PRs, issues, commits for a team  |
 
 ## Teams Configuration
 
@@ -179,35 +250,40 @@ Teams are defined in `packages/core/src/teams.config.ts`:
 
 ```typescript
 {
-  slug: "ops",
-  name: "Operations",
-  slackChannels: ["ops-general", "ops-incidents"],
-  githubRepos: ["acme/infra", "acme/deploy-tools"],
-  linearTeamIds: [],
+  slug: "platform",
+  name: "Platform",
+  slackChannels: ["C0600AB9J2Y"],       // supports channel IDs or names
+  githubRepos: [
+    "mappa-ai/mappa-main",
+    "mappa-ai/mappa-db",
+    "mappa-ai/mappa-ui",
+    "mappa-ai/mappa-mastra",
+    "mappa-ai/mappa-studio",
+  ],
+  linearTeamIds: ["5fdabca0-dc12-406f-9282-8e1806a923d2"],
   color: "#4a7aff",
 }
 ```
 
-Add Linear team IDs to enable the Linear agent for a team:
+**Current teams:** Platform, AI & Voice, Recruiting & Agents, Data & Infrastructure.
 
-```typescript
-linearTeamIds: ["team-abc-123"],
-```
+Add Linear team IDs to enable the Linear agent for a team. Slack channels accept both channel names (`general`) and channel IDs (`C0600AB9J2Y`).
 
 ## Tests
 
-76 tests across 11 files:
+82 tests across 12 files:
 
-**Core — 55 tests:**
+**Core — 64 tests:**
 - Agent runner: tool_use loop, error handling, max iterations, parallel tool calls
 - GitHub Agent: tool definitions, schemas, handler wiring
 - Linear Agent: tool definitions, schemas, handler wiring
 - Orchestrator: tool delegation logic based on team config
+- Person Agent: tool creation, schemas, conditional tools based on config
 - Teams config: validation, uniqueness, required fields
 - Normalizer: sorting, formatting, edge cases
 - Cache: set/get, TTL, overwrite
 
-**Web — 21 tests (2 skip without tokens):**
+**Web — 18 tests (2 skip without tokens):**
 - API route handlers (GET/POST), 404 handling
 - Cache-to-API integration flow
 - Ingest endpoints with token-gated tests
