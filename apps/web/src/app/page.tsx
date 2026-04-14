@@ -72,13 +72,22 @@ function MemberRow({ member, rank }: { member: MemberStats; rank: number }) {
 	);
 }
 
+interface Insights {
+	weekSummary: string;
+	velocity: string;
+	topPerformers: { name: string; highlight: string }[];
+	risks: string;
+	recommendations: string[];
+}
+
 export default function Dashboard() {
 	const [teams, setTeams] = useState<TeamWithSummary[]>([]);
 	const [members, setMembers] = useState<MemberStats[]>([]);
 	const [totalIssues, setTotalIssues] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [membersLoading, setMembersLoading] = useState(true);
-	const [refreshing, setRefreshing] = useState(false);
+	const [insights, setInsights] = useState<Insights | null>(null);
+	const [insightsLoading, setInsightsLoading] = useState(false);
 
 	const fetchTeams = useCallback(async () => {
 		const res = await fetch("/api/teams");
@@ -95,17 +104,16 @@ export default function Dashboard() {
 		setMembersLoading(false);
 	}, []);
 
-	async function refreshAll() {
-		setRefreshing(true);
-		for (const team of teams) {
-			try {
-				await fetch(`/api/refresh/${team.slug}?v=2`, { method: "POST" });
-			} catch (err) {
-				console.error(`Error refreshing ${team.slug}:`, err);
-			}
+	async function generateInsights() {
+		setInsightsLoading(true);
+		try {
+			const res = await fetch("/api/insights", { method: "POST" });
+			const data = await res.json();
+			setInsights(data);
+		} catch (err) {
+			console.error("Insights error:", err);
 		}
-		await fetchTeams();
-		setRefreshing(false);
+		setInsightsLoading(false);
 	}
 
 	useEffect(() => {
@@ -131,11 +139,11 @@ export default function Dashboard() {
 				</div>
 				<button
 					type="button"
-					onClick={refreshAll}
-					disabled={refreshing}
-					className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
+					onClick={generateInsights}
+					disabled={insightsLoading}
+					className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20"
 				>
-					{refreshing ? (
+					{insightsLoading ? (
 						<>
 							<svg
 								aria-hidden="true"
@@ -157,10 +165,26 @@ export default function Dashboard() {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
 								/>
 							</svg>
-							Generating...
+							IA Mario analyzing...
 						</>
 					) : (
-						"Generate AI Summary"
+						<>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+								/>
+							</svg>
+							IA Mario Analysis
+						</>
 					)}
 				</button>
 			</div>
@@ -195,6 +219,167 @@ export default function Dashboard() {
 					</p>
 				</div>
 			</div>
+
+			{/* IA Mario Insights */}
+			{insightsLoading && (
+				<div className="mb-8 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-indigo-500/20 p-8">
+					<div className="flex items-center gap-3">
+						<div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+						<span className="text-sm text-indigo-300 font-medium">
+							IA Mario is analyzing team performance...
+						</span>
+					</div>
+					<div className="mt-4 space-y-3">
+						<div className="h-3 bg-white/5 rounded w-full animate-pulse" />
+						<div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
+						<div className="h-3 bg-white/5 rounded w-1/2 animate-pulse" />
+					</div>
+				</div>
+			)}
+
+			{insights && !insightsLoading && (
+				<div className="mb-8 space-y-4">
+					{/* Summary + Velocity */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-indigo-500/20 p-6">
+							<div className="flex items-center gap-2 mb-3">
+								<div className="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+									<svg
+										aria-hidden="true"
+										className="w-3.5 h-3.5 text-indigo-400"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+										/>
+									</svg>
+								</div>
+								<h3 className="text-sm font-semibold text-indigo-300">Weekly Summary</h3>
+							</div>
+							<p className="text-sm text-gray-200 leading-relaxed">{insights.weekSummary}</p>
+						</div>
+						<div className="rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-6">
+							<div className="flex items-center gap-2 mb-3">
+								<div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+									<svg
+										aria-hidden="true"
+										className="w-3.5 h-3.5 text-emerald-400"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+										/>
+									</svg>
+								</div>
+								<h3 className="text-sm font-semibold text-emerald-300">Velocity</h3>
+							</div>
+							<p className="text-sm text-gray-200 leading-relaxed">{insights.velocity}</p>
+						</div>
+					</div>
+
+					{/* Top Performers + Risks */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6">
+							<h3 className="text-sm font-semibold text-yellow-300 mb-3 flex items-center gap-2">
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+									/>
+								</svg>
+								Top Performers
+							</h3>
+							<div className="space-y-3">
+								{insights.topPerformers.map((p) => (
+									<div key={p.name} className="flex items-start gap-3">
+										<div className="w-7 h-7 rounded-lg bg-yellow-500/10 flex items-center justify-center text-[10px] font-bold text-yellow-400 flex-shrink-0 mt-0.5">
+											{p.name
+												.split(" ")
+												.map((n) => n[0])
+												.join("")
+												.slice(0, 2)
+												.toUpperCase()}
+										</div>
+										<div>
+											<p className="text-sm font-medium text-gray-200">{p.name}</p>
+											<p className="text-xs text-gray-500">{p.highlight}</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+						<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6">
+							<h3 className="text-sm font-semibold text-orange-300 mb-3 flex items-center gap-2">
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+									/>
+								</svg>
+								Risks
+							</h3>
+							<p className="text-sm text-gray-200 leading-relaxed">{insights.risks}</p>
+						</div>
+					</div>
+
+					{/* Recommendations */}
+					<div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-6">
+						<h3 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+								/>
+							</svg>
+							Recommendations
+						</h3>
+						<div className="space-y-2">
+							{insights.recommendations.map((rec, i) => (
+								<div key={rec} className="flex items-start gap-3">
+									<span className="text-xs text-purple-400 bg-purple-500/10 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 font-mono mt-0.5">
+										{i + 1}
+									</span>
+									<p className="text-sm text-gray-300">{rec}</p>
+								</div>
+							))}
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Main Grid */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
