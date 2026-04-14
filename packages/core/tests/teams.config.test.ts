@@ -15,6 +15,7 @@ describe("teams config", () => {
 			expect(team.slackChannels.length).toBeGreaterThan(0);
 			expect(team.githubRepos).toBeArray();
 			expect(team.githubRepos.length).toBeGreaterThan(0);
+			expect(team.linearTeamIds).toBeArray();
 		}
 	});
 

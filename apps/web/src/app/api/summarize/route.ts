@@ -3,6 +3,7 @@ import {
 	fetchSlackMessages,
 	formatForPrompt,
 	generateTeamSummary,
+	generateTeamSummaryV2,
 	getTeamBySlug,
 	normalizeAndSort,
 	setCachedSummary,
@@ -10,11 +11,18 @@ import {
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-	const { teamSlug } = await request.json();
+	const body = await request.json();
+	const { teamSlug, v } = body as { teamSlug: string; v?: string };
 	const team = getTeamBySlug(teamSlug);
 
 	if (!team) {
 		return NextResponse.json({ error: "Team not found" }, { status: 404 });
+	}
+
+	if (v === "2") {
+		const summary = await generateTeamSummaryV2(team);
+		setCachedSummary(summary);
+		return NextResponse.json({ summary, agent: true });
 	}
 
 	const [slackItems, githubItems] = await Promise.all([
@@ -24,13 +32,9 @@ export async function POST(request: Request) {
 
 	const allItems = normalizeAndSort([...slackItems, ...githubItems]);
 	const activityJson = formatForPrompt(allItems);
-
 	const summary = await generateTeamSummary(team.slug, team.name, activityJson);
 
 	setCachedSummary(summary);
 
-	return NextResponse.json({
-		summary,
-		activityCount: allItems.length,
-	});
+	return NextResponse.json({ summary, activityCount: allItems.length });
 }

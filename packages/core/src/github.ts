@@ -26,7 +26,11 @@ export async function fetchGitHubActivity(
 	return items;
 }
 
-async function fetchPRs(owner: string, repo: string, since: string): Promise<ActivityItem[]> {
+export async function fetchPRs(
+	owner: string,
+	repo: string,
+	since: string,
+): Promise<ActivityItem[]> {
 	try {
 		const { data } = await octokit.rest.pulls.list({
 			owner,
@@ -59,7 +63,11 @@ async function fetchPRs(owner: string, repo: string, since: string): Promise<Act
 	}
 }
 
-async function fetchIssues(owner: string, repo: string, since: string): Promise<ActivityItem[]> {
+export async function fetchIssues(
+	owner: string,
+	repo: string,
+	since: string,
+): Promise<ActivityItem[]> {
 	try {
 		const { data } = await octokit.rest.issues.listForRepo({
 			owner,
@@ -89,7 +97,11 @@ async function fetchIssues(owner: string, repo: string, since: string): Promise<
 	}
 }
 
-async function fetchCommits(owner: string, repo: string, since: string): Promise<ActivityItem[]> {
+export async function fetchCommits(
+	owner: string,
+	repo: string,
+	since: string,
+): Promise<ActivityItem[]> {
 	try {
 		const { data } = await octokit.rest.repos.listCommits({
 			owner,

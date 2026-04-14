@@ -3,6 +3,7 @@ export interface TeamConfig {
 	name: string;
 	slackChannels: string[];
 	githubRepos: string[];
+	linearTeamIds: string[];
 	color: string;
 }
 
@@ -12,6 +13,7 @@ export const teams: TeamConfig[] = [
 		name: "Operations",
 		slackChannels: ["ops-general", "ops-incidents"],
 		githubRepos: ["acme/infra", "acme/deploy-tools"],
+		linearTeamIds: [],
 		color: "#4a7aff",
 	},
 	{
@@ -19,6 +21,7 @@ export const teams: TeamConfig[] = [
 		name: "Product",
 		slackChannels: ["product-dev", "product-design"],
 		githubRepos: ["acme/web-app", "acme/mobile-app"],
+		linearTeamIds: [],
 		color: "#a06aff",
 	},
 	{
@@ -26,6 +29,7 @@ export const teams: TeamConfig[] = [
 		name: "Marketing",
 		slackChannels: ["marketing-general", "marketing-campaigns"],
 		githubRepos: ["acme/landing-page", "acme/blog"],
+		linearTeamIds: [],
 		color: "#ff6ab0",
 	},
 ];

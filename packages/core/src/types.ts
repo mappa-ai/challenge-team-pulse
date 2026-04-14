@@ -1,6 +1,6 @@
 export interface ActivityItem {
-	source: "slack" | "github";
-	type: "message" | "pr" | "issue" | "commit";
+	source: "slack" | "github" | "linear";
+	type: "message" | "pr" | "issue" | "commit" | "linear_issue" | "linear_cycle" | "linear_project";
 	title: string;
 	author: string;
 	timestamp: string;

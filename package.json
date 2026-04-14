@@ -9,7 +9,7 @@
 		"check": "bunx biome check --write .",
 		"lazycheck": "bunx biome check --write . && bun run build",
 		"typecheck": "bun run --filter '*' typecheck",
-		"test": "bun test packages/core/tests apps/web/tests"
+		"test": "bash -c 'cd packages/core && bun test && cd ../../apps/web && bun test'"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
