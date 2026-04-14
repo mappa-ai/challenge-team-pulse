@@ -1,10 +1,13 @@
 "use client";
 
+import { ActivityTable } from "$/components/ActivityTable";
 import { SummaryView } from "$/components/SummaryView";
-import type { TeamConfig, TeamSummary } from "@team-pulse/core";
-import Link from "next/link";
+import { TabBar } from "$/components/TabBar";
+import type { ActivityItem, TeamConfig, TeamSummary } from "@team-pulse/core";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+
+type Tab = "Summary" | "Activity";
 
 export default function TeamPage() {
 	const params = useParams();
@@ -15,6 +18,11 @@ export default function TeamPage() {
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	const [activeTab, setActiveTab] = useState<Tab>("Summary");
+	const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+	const [activityLoading, setActivityLoading] = useState(false);
+	const [activityLoaded, setActivityLoaded] = useState(false);
 
 	const fetchTeam = useCallback(async () => {
 		const res = await fetch(`/api/teams/${slug}`);
@@ -41,153 +49,229 @@ export default function TeamPage() {
 		setRefreshing(false);
 	}
 
+	async function fetchActivity() {
+		if (activityLoaded) return;
+		setActivityLoading(true);
+		try {
+			const res = await fetch(`/api/activity/${slug}`);
+			const data = await res.json();
+			setActivityItems(data.items ?? []);
+			setActivityLoaded(true);
+		} catch (err) {
+			console.error("Activity fetch error:", err);
+		}
+		setActivityLoading(false);
+	}
+
+	function handleTabChange(tab: string) {
+		setActiveTab(tab as Tab);
+		if (tab === "Activity") {
+			fetchActivity();
+		}
+	}
+
 	useEffect(() => {
 		fetchTeam();
 	}, [fetchTeam]);
 
 	if (loading) {
 		return (
-			<main className="min-h-screen">
-				<div className="max-w-3xl mx-auto px-6 py-12">
-					<div className="animate-pulse space-y-6">
-						<div className="h-6 bg-white/10 rounded w-1/4" />
-						<div className="h-40 bg-white/[0.03] rounded-xl" />
-						<div className="h-40 bg-white/[0.03] rounded-xl" />
-					</div>
+			<div className="px-8 py-8">
+				<div className="animate-pulse space-y-6">
+					<div className="h-6 bg-white/10 rounded w-1/4" />
+					<div className="h-40 bg-white/[0.03] rounded-xl" />
+					<div className="h-40 bg-white/[0.03] rounded-xl" />
 				</div>
-			</main>
+			</div>
 		);
 	}
 
 	if (error || !team) {
 		return (
-			<main className="min-h-screen flex items-center justify-center">
+			<div className="px-8 py-8 flex items-center justify-center min-h-[50vh]">
 				<div className="text-center">
 					<h1 className="text-2xl font-bold text-white mb-2">Team not found</h1>
-					<Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm">
-						Back to dashboard
-					</Link>
+					<p className="text-gray-500 text-sm">Check the URL or select a team from the sidebar</p>
 				</div>
-			</main>
+			</div>
 		);
 	}
 
+	const prs = activityItems.filter((i) => i.type === "pr");
+	const linearIssues = activityItems.filter((i) => i.type === "linear_issue");
+	const issues = activityItems.filter((i) => i.type === "issue");
+	const commits = activityItems.filter((i) => i.type === "commit");
+
 	return (
-		<main className="min-h-screen">
-			<div className="max-w-3xl mx-auto px-6 py-12">
-				<Link
-					href="/"
-					className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors mb-8"
+		<div className="px-8 py-8">
+			{/* Header */}
+			<div className="flex items-center justify-between mb-6">
+				<div className="flex items-center gap-3">
+					<div className="w-4 h-4 rounded-full" style={{ backgroundColor: team.color }} />
+					<h1 className="text-2xl font-bold text-white">{team.name}</h1>
+				</div>
+				<button
+					type="button"
+					onClick={refresh}
+					disabled={refreshing}
+					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 				>
-					<svg
-						aria-hidden="true"
-						className="w-4 h-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M15 19l-7-7 7-7"
-						/>
-					</svg>
-					Back to dashboard
-				</Link>
-
-				<div className="flex items-center justify-between mb-8">
-					<div className="flex items-center gap-3">
-						<div className="w-4 h-4 rounded-full" style={{ backgroundColor: team.color }} />
-						<h1 className="text-2xl font-bold text-white">{team.name}</h1>
-					</div>
-					<button
-						type="button"
-						onClick={refresh}
-						disabled={refreshing}
-						className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-					>
-						{refreshing ? (
-							<>
-								<svg
-									aria-hidden="true"
-									className="animate-spin h-4 w-4"
-									fill="none"
-									viewBox="0 0 24 24"
-								>
-									<circle
-										className="opacity-25"
-										cx="12"
-										cy="12"
-										r="10"
-										stroke="currentColor"
-										strokeWidth="4"
-									/>
-									<path
-										className="opacity-75"
-										fill="currentColor"
-										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-									/>
-								</svg>
-								Generating...
-							</>
-						) : (
-							<>
-								<svg
-									aria-hidden="true"
-									className="w-4 h-4"
-									fill="none"
+					{refreshing ? (
+						<>
+							<svg
+								aria-hidden="true"
+								className="animate-spin h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									className="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
 									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-									/>
-								</svg>
-								Refresh
-							</>
-						)}
-					</button>
-				</div>
-
-				<div className="mb-6 flex flex-wrap gap-2">
-					{team.slackChannels.map((ch) => (
-						<span
-							key={ch}
-							className="text-xs px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300"
-						>
-							# {ch}
-						</span>
-					))}
-					{team.githubRepos.map((repo) => (
-						<span
-							key={repo}
-							className="text-xs px-2.5 py-1 rounded-md bg-gray-500/10 border border-gray-500/20 text-gray-400"
-						>
-							{repo}
-						</span>
-					))}
-				</div>
-
-				{summary ? (
-					<SummaryView summary={summary} />
-				) : (
-					<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-10 text-center">
-						<p className="text-gray-500 mb-4">No summary generated yet for this team.</p>
-						<button
-							type="button"
-							onClick={refresh}
-							disabled={refreshing}
-							className="px-5 py-2.5 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-						>
-							Generate Summary
-						</button>
-					</div>
-				)}
+									strokeWidth="4"
+								/>
+								<path
+									className="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+								/>
+							</svg>
+							Generating...
+						</>
+					) : (
+						"Refresh"
+					)}
+				</button>
 			</div>
-		</main>
+
+			{/* Source badges */}
+			<div className="mb-6 flex flex-wrap gap-2">
+				{team.slackChannels.map((ch) => (
+					<span
+						key={ch}
+						className="text-xs px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300"
+					>
+						# {ch}
+					</span>
+				))}
+				{team.githubRepos.map((repo) => (
+					<span
+						key={repo}
+						className="text-xs px-2.5 py-1 rounded-md bg-gray-500/10 border border-gray-500/20 text-gray-400"
+					>
+						{repo}
+					</span>
+				))}
+			</div>
+
+			{/* Tabs */}
+			<TabBar tabs={["Summary", "Activity"]} active={activeTab} onChange={handleTabChange} />
+
+			{/* Tab content */}
+			<div className="mt-6">
+				{activeTab === "Summary" &&
+					(summary ? (
+						<SummaryView summary={summary} />
+					) : (
+						<div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-10 text-center">
+							<p className="text-gray-500 mb-4">No summary generated yet for this team.</p>
+							<button
+								type="button"
+								onClick={refresh}
+								disabled={refreshing}
+								className="px-5 py-2.5 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+							>
+								Generate Summary
+							</button>
+						</div>
+					))}
+
+				{activeTab === "Activity" &&
+					(activityLoading ? (
+						<div className="space-y-4">
+							{[1, 2, 3].map((i) => (
+								<div
+									key={i}
+									className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-6 animate-pulse"
+								>
+									<div className="h-3 bg-white/10 rounded w-1/4 mb-3" />
+									<div className="h-2 bg-white/5 rounded w-full mb-2" />
+									<div className="h-2 bg-white/5 rounded w-3/4" />
+								</div>
+							))}
+						</div>
+					) : (
+						<div className="space-y-8">
+							{/* PR Table */}
+							<div>
+								<h3 className="text-sm font-medium text-purple-400 mb-3 flex items-center gap-2">
+									Pull Requests
+									<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
+										{prs.length}
+									</span>
+								</h3>
+								<ActivityTable
+									items={prs}
+									columns={["author", "title", "repo", "status", "timestamp"]}
+									emptyMessage="No recent pull requests"
+								/>
+							</div>
+
+							{/* Linear Issues Table */}
+							{linearIssues.length > 0 && (
+								<div>
+									<h3 className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
+										Linear Issues
+										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
+											{linearIssues.length}
+										</span>
+									</h3>
+									<ActivityTable
+										items={linearIssues}
+										columns={["author", "title", "status", "labels", "timestamp"]}
+										emptyMessage="No recent Linear issues"
+									/>
+								</div>
+							)}
+
+							{/* GitHub Issues */}
+							{issues.length > 0 && (
+								<div>
+									<h3 className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
+										Issues
+										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
+											{issues.length}
+										</span>
+									</h3>
+									<ActivityTable
+										items={issues}
+										columns={["author", "title", "repo", "status", "timestamp"]}
+										emptyMessage="No recent issues"
+									/>
+								</div>
+							)}
+
+							{/* Commits */}
+							{commits.length > 0 && (
+								<div>
+									<h3 className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
+										Commits
+										<span className="text-xs text-gray-600 bg-white/[0.05] px-1.5 py-0.5 rounded">
+											{commits.length}
+										</span>
+									</h3>
+									<ActivityTable
+										items={commits}
+										columns={["author", "title", "repo", "timestamp"]}
+										emptyMessage="No recent commits"
+									/>
+								</div>
+							)}
+						</div>
+					))}
+			</div>
+		</div>
 	);
 }

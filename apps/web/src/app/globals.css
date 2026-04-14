@@ -5,6 +5,7 @@
 :root {
 	--background: #0a0a0f;
 	--foreground: #e0e0e8;
+	--sidebar-width: 260px;
 }
 
 body {

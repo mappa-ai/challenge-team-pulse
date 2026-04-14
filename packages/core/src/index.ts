@@ -20,6 +20,7 @@ export { runAgent } from "./agents/runner";
 export { runGitHubAgent } from "./agents/github-agent";
 export { runLinearAgent } from "./agents/linear-agent";
 export { generateTeamSummaryV2 } from "./agents/orchestrator";
+export { runPersonAgent, searchPerson } from "./agents/person-agent";
 
 // Cache
 export { getCachedSummary, setCachedSummary, getAllCachedSummaries } from "./cache";

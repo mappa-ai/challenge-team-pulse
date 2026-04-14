@@ -12,7 +12,7 @@ export async function fetchSlackMessages(
 
 	for (const channel of channels) {
 		try {
-			const channelId = await resolveChannelId(channel);
+			const channelId = isChannelId(channel) ? channel : await resolveChannelId(channel);
 			if (!channelId) continue;
 
 			const result = await slack.conversations.history({
@@ -40,6 +40,10 @@ export async function fetchSlackMessages(
 	}
 
 	return items;
+}
+
+function isChannelId(value: string): boolean {
+	return /^[A-Z][A-Z0-9]{8,}$/.test(value);
 }
 
 async function resolveChannelId(channelName: string): Promise<string | undefined> {

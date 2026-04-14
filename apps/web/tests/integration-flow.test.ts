@@ -24,44 +24,44 @@ describe("integration: cache → API flow", () => {
 		const res = await GET_TEAMS();
 		const data = await parseJson(res);
 		const teams = data.teams as Record<string, unknown>[];
-		const uncached = teams.find((t) => t.slug === "marketing");
+		const uncached = teams.find((t) => t.slug === "data-infra");
 
-		// marketing might have a cached summary from other tests, or null
+		// data-infra might have a cached summary from other tests, or null
 		// The key assertion is that the field exists
 		expect(uncached).toHaveProperty("summary");
 	});
 
 	it("caching a summary makes it visible via GET /api/teams/[slug]", async () => {
-		const summary = makeSummary("ops");
+		const summary = makeSummary("platform");
 		setCachedSummary(summary);
 
-		const req = jsonRequest("http://localhost/api/teams/ops");
-		const res = await GET_TEAM(req, { params: { slug: "ops" } });
+		const req = jsonRequest("http://localhost/api/teams/platform");
+		const res = await GET_TEAM(req, { params: { slug: "platform" } });
 		const data = await parseJson(res);
 
 		expect(data.summary).not.toBeNull();
 		const cached = data.summary as Record<string, unknown>;
-		expect(cached.teamSlug).toBe("ops");
+		expect(cached.teamSlug).toBe("platform");
 		expect(cached.workingOn).toContain("Q1 deliverables");
 	});
 
 	it("caching a summary makes it visible via GET /api/teams list", async () => {
-		setCachedSummary(makeSummary("product"));
+		setCachedSummary(makeSummary("ai-voice"));
 
 		const res = await GET_TEAMS();
 		const data = await parseJson(res);
 		const teams = data.teams as Record<string, unknown>[];
-		const product = teams.find((t) => t.slug === "product");
+		const aiVoice = teams.find((t) => t.slug === "ai-voice");
 
-		expect(product!.summary).not.toBeNull();
-		const summary = product!.summary as Record<string, unknown>;
-		expect(summary.teamSlug).toBe("product");
+		expect(aiVoice!.summary).not.toBeNull();
+		const summary = aiVoice!.summary as Record<string, unknown>;
+		expect(summary.teamSlug).toBe("ai-voice");
 	});
 
 	it("cached count reflects number of cached teams", async () => {
-		setCachedSummary(makeSummary("ops"));
-		setCachedSummary(makeSummary("product"));
-		setCachedSummary(makeSummary("marketing"));
+		setCachedSummary(makeSummary("platform"));
+		setCachedSummary(makeSummary("ai-voice"));
+		setCachedSummary(makeSummary("recruiting"));
 
 		const res = await GET_TEAMS();
 		const data = await parseJson(res);
@@ -71,10 +71,10 @@ describe("integration: cache → API flow", () => {
 	});
 
 	it("summary includes sources array with label and url", async () => {
-		setCachedSummary(makeSummary("ops"));
+		setCachedSummary(makeSummary("platform"));
 
-		const req = jsonRequest("http://localhost/api/teams/ops");
-		const res = await GET_TEAM(req, { params: { slug: "ops" } });
+		const req = jsonRequest("http://localhost/api/teams/platform");
+		const res = await GET_TEAM(req, { params: { slug: "platform" } });
 		const data = await parseJson(res);
 		const summary = data.summary as Record<string, unknown>;
 		const sources = summary.sources as Record<string, string>[];
@@ -86,16 +86,16 @@ describe("integration: cache → API flow", () => {
 	});
 
 	it("overwriting cache for a team updates the API response", async () => {
-		setCachedSummary(makeSummary("ops"));
+		setCachedSummary(makeSummary("platform"));
 
 		// Update with new data
 		setCachedSummary({
-			...makeSummary("ops"),
+			...makeSummary("platform"),
 			workingOn: "Migrating to new infrastructure",
 		});
 
-		const req = jsonRequest("http://localhost/api/teams/ops");
-		const res = await GET_TEAM(req, { params: { slug: "ops" } });
+		const req = jsonRequest("http://localhost/api/teams/platform");
+		const res = await GET_TEAM(req, { params: { slug: "platform" } });
 		const data = await parseJson(res);
 		const summary = data.summary as Record<string, unknown>;
 
