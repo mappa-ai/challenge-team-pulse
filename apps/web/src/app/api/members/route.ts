@@ -1,5 +1,13 @@
-import { fetchGitHubActivity, fetchLinearIssues, teams } from "@team-pulse/core";
+import {
+	fetchGitHubActivity,
+	fetchLinearIssues,
+	getCachedInsights,
+	setCachedInsights,
+	teams,
+} from "@team-pulse/core";
 import { NextResponse } from "next/server";
+
+const CACHE_KEY = "members";
 
 const DONE_STATES = new Set(["done", "closed", "canceled", "cancelled"]);
 const IN_PROGRESS_STATES = new Set(["in progress", "in review"]);
@@ -33,6 +41,11 @@ function resolveDisplayName(name: string, source: "linear" | "github"): string {
 }
 
 export async function GET() {
+	const cached = getCachedInsights(CACHE_KEY);
+	if (cached) {
+		return NextResponse.json(cached);
+	}
+
 	const allLinearTeamIds = [...new Set(teams.flatMap((t) => t.linearTeamIds))];
 	const allRepos = [...new Set(teams.flatMap((t) => t.githubRepos))];
 
@@ -108,10 +121,14 @@ export async function GET() {
 		}))
 		.sort((a, b) => b.totalActivity - a.totalActivity);
 
-	return NextResponse.json({
+	const payload = {
 		members,
 		totalIssues: linearIssues.length,
 		totalPRs: githubItems.filter((i) => i.type === "pr").length,
 		totalCommits: githubItems.filter((i) => i.type === "commit").length,
-	});
+	};
+
+	setCachedInsights(CACHE_KEY, payload as unknown as Record<string, unknown>);
+
+	return NextResponse.json(payload);
 }
