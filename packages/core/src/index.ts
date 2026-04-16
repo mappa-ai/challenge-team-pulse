@@ -26,6 +26,7 @@ export { runGitHubAgent } from "./agents/github-agent";
 export { runLinearAgent } from "./agents/linear-agent";
 export { generateTeamSummaryV2 } from "./agents/orchestrator";
 export { runPersonAgent, searchPerson } from "./agents/person-agent";
+export { makeMarioTools, runMarioAgent } from "./agents/mario-agent";
 
 // Cache
 export { getCachedSummary, setCachedSummary, getAllCachedSummaries } from "./cache";
