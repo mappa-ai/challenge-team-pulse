@@ -1,0 +1,10 @@
+{
+	"version": 1,
+	"skills": {
+		"grug-brain": {
+			"source": "DrSh4dow/grug-brain-skill",
+			"sourceType": "github",
+			"computedHash": "d40f4b903c9d0211ffe9a228d96949953bd8af593fa098aa4dd2bbade54619fe"
+		}
+	}
+}

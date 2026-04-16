@@ -29,4 +29,10 @@ export { runPersonAgent, searchPerson } from "./agents/person-agent";
 export { makeMarioTools, runMarioAgent } from "./agents/mario-agent";
 
 // Cache
-export { getCachedSummary, setCachedSummary, getAllCachedSummaries } from "./cache";
+export {
+	getCachedSummary,
+	setCachedSummary,
+	getAllCachedSummaries,
+	getCachedInsights,
+	setCachedInsights,
+} from "./cache";

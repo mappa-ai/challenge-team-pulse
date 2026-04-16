@@ -1,0 +1,82 @@
+[
+	{
+		"query": "I'm about to split our Rails app into four services because the codebase feels messy. Before I do that, can you help me think through whether that actually reduces complexity or just moves it around?",
+		"should_trigger": true
+	},
+	{
+		"query": "We keep adding generic abstractions to a payments module that only has two concrete use cases. Can you help me simplify the design and decide what boundaries are actually worth keeping?",
+		"should_trigger": true
+	},
+	{
+		"query": "My team is debating whether to build a plugin system now or wait until the extension points are real. I need help choosing the safer architecture path for a feature-flag system that only has one current implementation.",
+		"should_trigger": true
+	},
+	{
+		"query": "Can you review this refactor plan? It replaces a working order-processing module with a workflow engine, event bus, and generic rule executor because we might need more flexibility next quarter.",
+		"should_trigger": true
+	},
+	{
+		"query": "Our admin dashboard is simple CRUD, but frontend wants a separate SPA and API because that's more modern. Help me decide whether that's actually worth the added complexity for this tool.",
+		"should_trigger": true
+	},
+	{
+		"query": "I need advice on testing strategy while a big module is still changing fast. The team wants exhaustive unit tests first, but I suspect integration tests around stable boundaries would be better.",
+		"should_trigger": true
+	},
+	{
+		"query": "I'm writing an architecture note for a new internal case-management app in `/docs/case-mgmt-arch.md`. Scope is forms, approvals, search, and one nightly export. The draft currently proposes microservices, Kafka, GraphQL, and a BPM engine. I want help simplifying the design before I send it to staff engineers.",
+		"should_trigger": true
+	},
+	{
+		"query": "Could you sanity-check an API direction for me? We only need `createInvoice`, `getInvoice`, and `refundInvoice`, but someone proposed a generic command bus plus handler registry so we can support future billing actions. I'm looking for design guidance, not implementation.",
+		"should_trigger": true
+	},
+	{
+		"query": "We're considering extracting the reporting module from our monolith because one page feels slow during month-end close. I want help deciding if this is really a service-boundary problem or if we're about to make debugging worse.",
+		"should_trigger": true
+	},
+	{
+		"query": "My team keeps saying 'let's make it extensible' and I keep ending up with indirection everywhere. Can you act like a design reviewer and tell me what to simplify in this proposal: modular monolith today, maybe plugin points later, but right now only one consumer and one workflow?",
+		"should_trigger": true
+	},
+	{
+		"query": "Please implement a generic rules engine in TypeScript for discount evaluation, with support for nested boolean groups and JSON configuration.",
+		"should_trigger": false
+	},
+	{
+		"query": "Write me a Postgres migration that adds a nullable `archived_at` column to invoices and backfills old cancelled rows.",
+		"should_trigger": false
+	},
+	{
+		"query": "I have a failing React test around a date picker and need help fixing the test code.",
+		"should_trigger": false
+	},
+	{
+		"query": "Can you benchmark this Python function and make it faster? I already have profiling output showing 80% of time is in one regex.",
+		"should_trigger": false
+	},
+	{
+		"query": "Generate a REST API client from this OpenAPI spec and save it under `src/generated`.",
+		"should_trigger": false
+	},
+	{
+		"query": "Summarize this design doc for leadership in five bullets. Don't change the architecture, just make it easier to read.",
+		"should_trigger": false
+	},
+	{
+		"query": "I already decided to split the auth service out. Can you scaffold the new FastAPI service and copy the existing endpoints into it?",
+		"should_trigger": false
+	},
+	{
+		"query": "Please review this PR for correctness. It renames a bunch of billing fields and updates serializers. I want code-review comments, not architecture advice.",
+		"should_trigger": false
+	},
+	{
+		"query": "Take this slow SQL query from production, explain the query plan, and suggest indexes. I don't need broad system design help, just database tuning.",
+		"should_trigger": false
+	},
+	{
+		"query": "I'm making a slide for the CTO comparing monoliths and microservices at a high level. Keep it neutral and presentation-friendly; don't turn it into a recommendation for my codebase.",
+		"should_trigger": false
+	}
+]

@@ -1,0 +1,77 @@
+{
+	"skill_name": "grug-brain",
+	"evals": [
+		{
+			"id": 1,
+			"prompt": "I'm designing a new internal operations platform. Right now it's a couple of CRUD screens and a nightly sync job, but the team wants to start with six microservices, Kafka, GraphQL, and a workflow engine so we 'don't have to re-architect later'. Can you help me decide what architecture to use?",
+			"expected_output": "Pushes back on speculative complexity, recommends a simpler initial architecture, explains what evidence would justify more distributed components later.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Clearly warns that the proposed microservices-first architecture is premature or unnecessarily complex.",
+				"Recommends a simpler starting point such as a monolith or single deployable service with internal modules.",
+				"Explains what future evidence or conditions would justify splitting into more distributed components later."
+			],
+			"files": []
+		},
+		{
+			"id": 2,
+			"prompt": "I have a 3000-line billing module that's ugly, but it works. I want to refactor it into a generic rules engine and plugin system before we add regional pricing. How would you approach the refactor?",
+			"expected_output": "Respects existing working code, warns against a large speculative rewrite, recommends small safe refactor steps and finding stable cut points first.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Respects that the current module works and avoids treating replacement as the default answer.",
+				"Warns against a large speculative rewrite into a generic rules engine or plugin system.",
+				"Recommends small safe refactor steps that identify stable cut points before deeper abstraction."
+			],
+			"files": []
+		},
+		{
+			"id": 3,
+			"prompt": "Our product manager wants a React SPA with a separate JSON API for a simple admin tool that mostly edits records and shows reports. The frontend lead says server-rendered pages are 'old fashioned'. What would a simpler but still professional approach look like?",
+			"expected_output": "Advocates for a lower-complexity frontend architecture, explains tradeoffs, and avoids defaulting to fashionable frontend complexity without a real need.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Pushes back on adopting a heavy SPA plus separate API by default for a simple admin workflow.",
+				"Recommends a lower-complexity professional alternative such as server-rendered pages or a simpler stack.",
+				"Acknowledges when a heavier frontend architecture would be justified later based on concrete interaction needs."
+			],
+			"files": []
+		},
+		{
+			"id": 4,
+			"prompt": "I'm designing a shared SDK for five internal tools. My first instinct is to build a fully generic resource abstraction with builders, adapters, and extension hooks so we can support future data types. Right now the only real need is fetching users and updating account settings. How should I design the API?",
+			"expected_output": "Pushes toward an API designed around current common use cases, warns against speculative generic machinery, and recommends layering complexity only after real extension points emerge.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Warns against speculative generic machinery such as broad abstraction layers, adapters, or extension hooks before they are needed.",
+				"Recommends designing the API around the current common use cases of fetching users and updating account settings.",
+				"Suggests adding layered complexity only after real extension points or stable patterns emerge."
+			],
+			"files": []
+		},
+		{
+			"id": 5,
+			"prompt": "My team wants every module covered by detailed unit tests before we continue a refactor. The code is still moving a lot, and we already have a few integration tests around the main workflows. What testing strategy would you recommend?",
+			"expected_output": "Recommends a balanced testing strategy centered on stable integration boundaries, cautions against over-investing in brittle implementation-level unit tests, and preserves a small end-to-end safety net.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Recommends keeping testing centered on stable integration boundaries rather than exhaustive implementation-level unit coverage.",
+				"Explains why detailed unit tests may be brittle or lower value while the code is still changing rapidly.",
+				"Preserves some end-to-end or workflow-level safety net instead of arguing for only one test type."
+			],
+			"files": []
+		},
+		{
+			"id": 6,
+			"prompt": "A dashboard feels slow, and one engineer wants to spend a sprint rewriting the rendering pipeline because there are nested loops in the code. We have no profiling data yet. How would you approach the performance work?",
+			"expected_output": "Rejects premature optimization, asks for evidence such as profiling or traces, and prioritizes measured bottlenecks over intuition or code aesthetics.",
+			"expectations": [
+				"Identifies the main complexity risks, recommends a simpler default suited to current needs, suggests a small safe next step, and names concrete conditions for adding complexity later.",
+				"Rejects or slows down the proposed optimization work because there is no evidence yet.",
+				"Asks for concrete profiling, tracing, or measurement before recommending a rewrite.",
+				"Emphasizes prioritizing real bottlenecks over intuition, nested-loop anxiety, or code aesthetics."
+			],
+			"files": []
+		}
+	]
+}
