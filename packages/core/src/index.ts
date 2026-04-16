@@ -33,6 +33,8 @@ export {
 	getCachedSummary,
 	setCachedSummary,
 	getAllCachedSummaries,
-	getCachedInsights,
-	setCachedInsights,
+	getSwrCache,
+	setSwrCache,
+	isRevalidating,
+	setRevalidating,
 } from "./cache";

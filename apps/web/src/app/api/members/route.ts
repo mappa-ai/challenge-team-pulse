@@ -1,8 +1,10 @@
 import {
 	fetchGitHubActivity,
 	fetchLinearIssues,
-	getCachedInsights,
-	setCachedInsights,
+	getSwrCache,
+	isRevalidating,
+	setRevalidating,
+	setSwrCache,
 	teams,
 } from "@team-pulse/core";
 import { NextResponse } from "next/server";
@@ -12,7 +14,6 @@ const CACHE_KEY = "members";
 const DONE_STATES = new Set(["done", "closed", "canceled", "cancelled"]);
 const IN_PROGRESS_STATES = new Set(["in progress", "in review"]);
 
-/** Map raw Linear names (emails, etc.) to proper display names */
 const DISPLAY_NAMES: Record<string, string> = {
 	"greynner@mappa.ai": "Greynner Moreno",
 	"yordi@mappa.ai": "Yordi",
@@ -24,7 +25,6 @@ const DISPLAY_NAMES: Record<string, string> = {
 	"sebastian@mappa.ai": "Sebastian",
 };
 
-/** Map GitHub usernames to display names */
 const GITHUB_NAMES: Record<string, string> = {
 	Greynner: "Greynner Moreno",
 	jgtavarez: "Juan Gabriel Tavarez",
@@ -40,12 +40,7 @@ function resolveDisplayName(name: string, source: "linear" | "github"): string {
 	return DISPLAY_NAMES[name] ?? name;
 }
 
-export async function GET() {
-	const cached = getCachedInsights(CACHE_KEY);
-	if (cached) {
-		return NextResponse.json(cached);
-	}
-
+async function fetchMembers() {
 	const allLinearTeamIds = [...new Set(teams.flatMap((t) => t.linearTeamIds))];
 	const allRepos = [...new Set(teams.flatMap((t) => t.githubRepos))];
 
@@ -56,7 +51,6 @@ export async function GET() {
 		fetchGitHubActivity(allRepos, 336),
 	]);
 
-	// Group by resolved display name
 	const byAuthor = new Map<
 		string,
 		{
@@ -121,14 +115,31 @@ export async function GET() {
 		}))
 		.sort((a, b) => b.totalActivity - a.totalActivity);
 
-	const payload = {
+	return {
 		members,
 		totalIssues: linearIssues.length,
 		totalPRs: githubItems.filter((i) => i.type === "pr").length,
 		totalCommits: githubItems.filter((i) => i.type === "commit").length,
 	};
+}
 
-	setCachedInsights(CACHE_KEY, payload as unknown as Record<string, unknown>);
+export async function GET() {
+	const cached = getSwrCache(CACHE_KEY);
 
-	return NextResponse.json(payload);
+	if (cached) {
+		// stale: devuelve dato viejo e inicia revalidación en background
+		if (cached.stale && !isRevalidating(CACHE_KEY)) {
+			setRevalidating(CACHE_KEY, true);
+			fetchMembers()
+				.then((data) => setSwrCache(CACHE_KEY, data as unknown as Record<string, unknown>))
+				.catch(console.error)
+				.finally(() => setRevalidating(CACHE_KEY, false));
+		}
+		return NextResponse.json(cached.data);
+	}
+
+	// cold cache: bloquea solo la primera vez
+	const data = await fetchMembers();
+	setSwrCache(CACHE_KEY, data as unknown as Record<string, unknown>);
+	return NextResponse.json(data);
 }
